@@ -1,0 +1,13 @@
+{
+  "appId": "ir.kalorishomar.app",
+  "appName": "کالری‌شمار روزمره",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#0C0C0D",
+    "allowMixedContent": false
+  }
+}

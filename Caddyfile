@@ -1,0 +1,68 @@
+# Global Caddy options tuned for Railway's edge proxy environment
+{
+	admin off
+	persist_config off
+	auto_https off
+
+	log {
+		format json
+	}
+
+	servers {
+		trusted_proxies static 0.0.0.0/0 ::/0
+	}
+}
+
+# Site block listening on Railway's injected $PORT (defaults to 3000 locally)
+:{$PORT:3000} {
+	log {
+		format json
+	}
+
+	# Dedicated zero-downtime healthcheck endpoint for Railway (healthcheck.railway.app)
+	handle /health {
+		header Content-Type "application/json; charset=utf-8"
+		header Cache-Control "no-store"
+		respond `{"status":"ok","service":"kalorishomar"}` 200
+	}
+
+	handle {
+		root * /app/dist
+		encode zstd gzip
+
+		# Hardened security headers (100% self-hosted fonts -> strict self-only CSP)
+		header {
+			Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://world.openfoodfacts.org; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+			Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+			X-Content-Type-Options "nosniff"
+			X-Frame-Options "DENY"
+			Referrer-Policy "strict-origin-when-cross-origin"
+			Permissions-Policy "camera=(self), microphone=(self), geolocation=()"
+			-Server
+		}
+
+		# Fingerprinted Vite assets: immutable 1-year browser/CDN cache
+		@hashedAssets path /assets/*
+		header @hashedAssets Cache-Control "public, max-age=31536000, immutable"
+
+		# Service worker & PWA manifest: always revalidate for immediate updates
+		@serviceWorker path /sw.js
+		header @serviceWorker {
+			Cache-Control "no-cache, no-store, must-revalidate"
+			Service-Worker-Allowed "/"
+		}
+
+		@manifest path /manifest.webmanifest
+		header @manifest {
+			Content-Type "application/manifest+json; charset=utf-8"
+			Cache-Control "public, max-age=0, must-revalidate"
+		}
+
+		@html path / /index.html
+		header @html Cache-Control "no-cache"
+
+		# SPA fallback routing
+		try_files {path} /index.html
+		file_server
+	}
+}

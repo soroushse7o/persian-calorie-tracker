@@ -1,0 +1,17 @@
+name: بازخورد کاربری، پیشنهاد قابلیت یا گزارش بتا
+description: ارسال نظر، پیشنهاد تجربه کاربری یا گزارش ناشناس بتای کالری‌شمار روزمره
+title: "[بازخورد] "
+labels: ["feedback"]
+body:
+  - type: textarea
+    id: details
+    attributes:
+      label: شرح بازخورد، پیشنهاد یا گزارش ناشناس بتا
+      placeholder: نظر یا گزارش کپی‌شده از بخش «گزارش ناشناس بتا» را اینجا قرار دهید...
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: دستگاه و مرورگر (اختیاری)
+      placeholder: مثلاً iPhone Safari iOS 18 یا Android Chrome

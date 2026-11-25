@@ -1,0 +1,258 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Vazirmatn Variable", "Vazirmatn", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --color-canvas: #0C0C0D;
+  --color-surface: #161618;
+  --color-surface-elevated: #1E1E22;
+  --color-surface-hover: #25252A;
+  --color-border-subtle: #26262A;
+  --color-border-strong: #36363C;
+  --color-kcal: #10B981;
+  --color-kcal-over: #EF4444;
+  --color-protein: #38BDF8;
+  --color-carbs: #F59E0B;
+  --color-fat: #FB7185;
+}
+
+:root,
+html.dark {
+  --bg-canvas: #0C0C0D;
+  --bg-surface: #161618;
+  --bg-elevated: #1E1E22;
+  --border-surface: #26262A;
+  --border-elevated: #2A2A30;
+  --text-primary: #FAFAFA;
+  --text-secondary: #A1A1AA;
+  --ring-track: #242429;
+  --chart-grid: #232329;
+  --chart-empty-bar: #2A2A31;
+  --chart-label: #A1A1AA;
+  --chart-label-strong: #E4E4E7;
+  color-scheme: dark;
+}
+
+html.light {
+  --bg-canvas: #F4F5F7;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #F1F3F5;
+  --border-surface: #E2E5EA;
+  --border-elevated: #D5D9E2;
+  --text-primary: #111318;
+  --text-secondary: #4B5563;
+  --ring-track: #E2E6ED;
+  --chart-grid: #E5E7EB;
+  --chart-empty-bar: #DCE1EA;
+  --chart-label: #4B5563;
+  --chart-label-strong: #1F2937;
+  color-scheme: light;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    direction: rtl;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    line-height: 1.65;
+    overflow-x: hidden;
+  }
+
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  input,
+  textarea,
+  select {
+    font-family: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid #10B981;
+    outline-offset: 2px;
+  }
+}
+
+.tabular-nums-fa {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.card-surface {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-surface);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.03);
+}
+
+.card-elevated {
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-elevated);
+}
+
+/* Complete Light Theme surface, border & WCAG AA contrast adaptation */
+html.light .bg-\[\#0C0C0D\],
+html.light .bg-\[\#0C0C0D\]\/90,
+html.light .bg-\[\#0C0C0D\]\/60,
+html.light .bg-\[\#131317\],
+html.light .bg-\[\#141418\] {
+  background-color: #F4F5F7 !important;
+}
+html.light .bg-\[\#161618\],
+html.light .bg-\[\#16161B\],
+html.light .bg-\[\#111113\]\/92 {
+  background-color: #FFFFFF !important;
+}
+html.light .bg-\[\#1A1A1E\],
+html.light .bg-\[\#1E1E22\],
+html.light .bg-\[\#222228\],
+html.light .bg-\[\#22222A\],
+html.light .bg-\[\#25252B\],
+html.light .bg-\[\#25252C\],
+html.light .bg-\[\#27272D\],
+html.light .bg-\[\#27272E\] {
+  background-color: #ECEFF3 !important;
+}
+html.light .bg-\[\#161A14\] {
+  background-color: #ECFDF5 !important;
+}
+html.light .border-\[\#1E1E22\],
+html.light .border-\[\#222226\],
+html.light .border-\[\#222227\],
+html.light .border-\[\#23232A\],
+html.light .border-\[\#242429\],
+html.light .border-\[\#24242A\],
+html.light .border-\[\#24242B\],
+html.light .border-\[\#24242C\],
+html.light .border-\[\#25252C\],
+html.light .border-\[\#25252D\],
+html.light .border-\[\#25252E\],
+html.light .border-\[\#26262A\],
+html.light .border-\[\#26262C\],
+html.light .border-\[\#26262E\],
+html.light .border-\[\#26262F\],
+html.light .border-\[\#282830\],
+html.light .border-\[\#2A2A30\],
+html.light .border-\[\#2A2A31\],
+html.light .border-\[\#2A2A32\],
+html.light .border-\[\#2B2B31\],
+html.light .border-\[\#2B2B32\],
+html.light .border-\[\#2B2B33\],
+html.light .border-\[\#2C2C32\],
+html.light .border-\[\#2C2C33\],
+html.light .border-\[\#2C2C34\],
+html.light .border-\[\#2E2E35\],
+html.light .border-\[\#2E2E36\],
+html.light .border-\[\#34343D\],
+html.light .border-\[\#35353F\] {
+  border-color: #DCE0E8 !important;
+}
+html.light .divide-\[\#1F1F24\] > :not(:last-child) {
+  border-color: #E5E7EB !important;
+}
+html.light .bg-\[\#242429\],
+html.light .bg-\[\#24242C\] {
+  background-color: #E2E6ED !important;
+}
+html.light .text-zinc-50,
+html.light .text-zinc-100,
+html.light .text-zinc-200 {
+  color: #111318 !important;
+}
+html.light .text-zinc-300 {
+  color: #374151 !important;
+}
+html.light .text-zinc-400,
+html.light .text-zinc-500 {
+  color: #4B5563 !important;
+}
+html.light .text-emerald-300,
+html.light .text-emerald-400 {
+  color: #047857 !important;
+}
+html.light .text-lime-400 {
+  color: #3F6212 !important;
+}
+html.light .text-amber-300,
+html.light .text-amber-400,
+html.light .text-amber-200 {
+  color: #B45309 !important;
+}
+html.light .text-sky-300,
+html.light .text-sky-400,
+html.light .text-cyan-400,
+html.light .text-cyan-300 {
+  color: #0369A1 !important;
+}
+html.light .text-rose-300,
+html.light .text-rose-400 {
+  color: #BE123C !important;
+}
+html.light .hover\:bg-\[\#1B1B1E\]:hover,
+html.light .hover\:bg-\[\#1B1B1F\]:hover,
+html.light .hover\:bg-\[\#1E1E24\]:hover,
+html.light .hover\:bg-\[\#222228\]:hover,
+html.light .hover\:bg-\[\#27272E\]:hover,
+html.light .hover\:bg-\[\#282830\]:hover {
+  background-color: #E5E9F0 !important;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-canvas);
+}
+::-webkit-scrollbar-thumb {
+  background: #2A2A30;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3F3F46;
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeSlideUp 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Accessibility: respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

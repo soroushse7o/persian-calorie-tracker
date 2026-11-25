@@ -1,0 +1,47 @@
+{
+  "name": "persian-calorie-tracker",
+  "private": true,
+  "version": "1.4.0",
+  "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "soroushse7o",
+    "url": "https://github.com/soroushse7o"
+  },
+  "homepage": "https://github.com/soroushse7o/persian-calorie-tracker#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/soroushse7o/persian-calorie-tracker.git"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "check:budget": "node scripts/check-bundle-budget.mjs",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "node scripts/e2e-offline.mjs",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@fontsource-variable/vazirmatn": "^5.3.0",
+    "lucide-react": "^1.77.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "@vitest/coverage-v8": "^5.1.1",
+    "oxlint": "^1.90.0",
+    "playwright": "^1.65.1",
+    "tailwindcss": "^4.3.5",
+    "typescript": "~7.0.2",
+    "vite": "^8.3.6",
+    "vitest": "^5.1.1"
+  }
+}

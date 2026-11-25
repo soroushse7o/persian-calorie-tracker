@@ -1,0 +1,17 @@
+name: گزارش باگ فنی
+description: گزارش خطا در پارسر فارسی، نمایش اعداد، حالت آفلاین یا ذخیره‌سازی
+title: "[باگ] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: steps
+    attributes:
+      label: چه اتفاقی افتاد و چگونه تکرار می‌شود؟
+      placeholder: ۱. جمله «...» را وارد کردم ۲. انتظار داشتم ...
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: مرورگر و سیستم‌عامل
+      placeholder: مثلاً Chrome 131 Android / Safari iOS

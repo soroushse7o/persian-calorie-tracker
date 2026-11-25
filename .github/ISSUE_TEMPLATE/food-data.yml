@@ -1,0 +1,23 @@
+name: پیشنهاد یا اصلاح اطلاعات غذایی (غذای ناموجود / اشتباه)
+description: درخواست افزودن غذای ایرانی جدید یا اصلاح کالری و واحد خانگی یک غذای موجود
+title: "[بانک غذا] "
+labels: ["food-catalog"]
+body:
+  - type: input
+    id: food_name
+    attributes:
+      label: نام غذا یا خوراکی
+      placeholder: مثلاً آش دوغ اردبیل / بیسکویت جو ستاک
+    validations:
+      required: true
+  - type: textarea
+    id: units_and_macros
+    attributes:
+      label: واحد خانگی پیشنهادی و ارزش غذایی (در صورت اطلاع)
+      description: مثلاً هر ۱ کاسه (۲۵۰ گرم) یا کالری در ۱۰۰ گرم از روی برچسب محصول یا جدول تغذیه
+      placeholder: هر ۱ بسته (۴۵ گرم) حدود ۲۰۰ کالری...
+  - type: input
+    id: source_ref
+    attributes:
+      label: منبع مرجع (برچسب بسته‌بندی / جدول انستیتو تغذیه / USDA)
+      placeholder: اختیاری
