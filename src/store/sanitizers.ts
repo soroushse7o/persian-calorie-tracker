@@ -24,7 +24,11 @@ const VALID_CATEGORIES = new Set<FoodCategory>([
   'drinks_snacks',
 ])
 
-export const VALID_MEAL_TYPES = new Set<MealType>(MEAL_TYPE_ORDER)
+export const VALID_MEAL_TYPES = new Set<MealType>([
+  ...MEAL_TYPE_ORDER,
+  'snack2',
+  'snack3',
+])
 export const DATE_KEY_REGEX = /^\d{4}-\d{2}-\d{2}$/
 
 /**
@@ -490,6 +494,36 @@ export function normalizeGoals(raw: Partial<UserGoals> | null | undefined): User
       raw.scheduleMode === 'ramadan' || raw.scheduleMode === 'fasting_16_8'
         ? raw.scheduleMode
         : 'standard',
+    ...(typeof raw.extraSnackCount === 'number' && Number.isFinite(raw.extraSnackCount)
+      ? { extraSnackCount: Math.max(0, Math.min(2, Math.round(raw.extraSnackCount))) }
+      : {}),
+    ...(raw.customMealLabels && typeof raw.customMealLabels === 'object'
+      ? {
+          customMealLabels: Object.fromEntries(
+            Object.entries(raw.customMealLabels)
+              .filter(([key, value]) =>
+                VALID_MEAL_TYPES.has(key as MealType) &&
+                typeof value === 'string' &&
+                value.trim().length > 0,
+              )
+              .map(([key, value]) => [
+                key,
+                clipText((value as string).trim(), MAX_UNIT_NAME_LENGTH),
+              ]),
+          ) as Partial<Record<MealType, string>>,
+        }
+      : {}),
+    ...(Array.isArray(raw.quickFavorites)
+      ? {
+          quickFavorites: [
+            ...new Set(
+              raw.quickFavorites
+                .filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+                .map((id) => clipText(id.trim(), MAX_ID_LENGTH)),
+            ),
+          ].slice(0, 100),
+        }
+      : {}),
     ...(raw.sex === 'male' || raw.sex === 'female' ? { sex: raw.sex } : {}),
     ...(typeof raw.ageYears === 'number' &&
     Number.isFinite(raw.ageYears) &&

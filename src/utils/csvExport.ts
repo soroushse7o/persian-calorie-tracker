@@ -3,6 +3,7 @@ import {
   type FoodItem,
   type LoggedFoodEntry,
   type MealScheduleMode,
+  type MealType,
 } from '../types/nutrition'
 import { resolveEntryMicronutrients } from './micronutrients'
 import { dateFromKey, formatJalaliDate } from './persianFormat'
@@ -28,8 +29,9 @@ export function buildEntriesCsv(
   entries: LoggedFoodEntry[],
   foods: readonly FoodItem[] = [],
   scheduleMode: MealScheduleMode = 'standard',
+  customLabels?: Partial<Record<MealType, string>>,
 ): string {
-  const mealLabels = getMealTypeLabels(scheduleMode)
+  const mealLabels = getMealTypeLabels(scheduleMode, customLabels)
   const foodById = new Map(foods.map((f) => [f.id, f]))
 
   const headers = [

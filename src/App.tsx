@@ -136,7 +136,7 @@ export function App() {
   const [toast, setToast] = useState<ToastState | null>(null)
   const toastTimerRef = useRef<number | null>(null)
 
-  const mealLabels = getMealTypeLabels(goals.scheduleMode)
+  const mealLabels = getMealTypeLabels(goals.scheduleMode, goals.customMealLabels)
 
   const showToast = useCallback((message: string, undoEntry?: LoggedFoodEntry) => {
     if (toastTimerRef.current !== null) {
@@ -691,6 +691,8 @@ export function App() {
                 recentEntries={entries}
                 templates={templates}
                 totalLoggedCount={entries.length}
+                goals={goals}
+                onUpdateGoals={updateGoals}
                 scheduleMode={goals.scheduleMode}
                 inputText={quickInput}
                 onInputTextChange={setQuickInput}
@@ -839,6 +841,7 @@ export function App() {
           >
             <SettingsTab
               goals={goals}
+              foods={foods}
               foodsCount={foods.length}
               customFoodsCount={customFoodsCount}
               overridesCount={overridesCount}

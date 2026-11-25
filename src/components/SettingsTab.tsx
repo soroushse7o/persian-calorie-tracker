@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { BackupAnalysisResult, BackupImportMode } from '../store/backup'
-import type { LoggedFoodEntry, ThemeMode, UserGoals } from '../types/nutrition'
+import type { FoodItem, LoggedFoodEntry, ThemeMode, UserGoals } from '../types/nutrition'
+import { MealCustomizationSection } from './settings/MealCustomizationSection'
 import type { PwaStatus } from '../utils/pwa'
 import { AboutAndBetaSection } from './settings/AboutAndBetaSection'
 import { BackupAndDataSection } from './settings/BackupAndDataSection'
@@ -9,6 +10,7 @@ import { PreferencesAndRemindersSection } from './settings/PreferencesAndReminde
 
 interface SettingsTabProps {
   goals: UserGoals
+  foods: FoodItem[]
   foodsCount: number
   customFoodsCount: number
   overridesCount: number
@@ -49,6 +51,7 @@ const SECTION_TABS: ReadonlyArray<{ id: SettingsSectionFilter; label: string }> 
  */
 export function SettingsTab({
   goals,
+  foods,
   foodsCount,
   customFoodsCount,
   overridesCount,
@@ -107,6 +110,10 @@ export function SettingsTab({
           initialOpenCalculator={initialOpenCalculator}
           onUpdateGoals={onUpdateGoals}
         />
+      )}
+
+      {(sectionFilter === 'all' || sectionFilter === 'preferences') && (
+        <MealCustomizationSection goals={goals} foods={foods} onUpdateGoals={onUpdateGoals} />
       )}
 
       {(sectionFilter === 'all' || sectionFilter === 'preferences') && (

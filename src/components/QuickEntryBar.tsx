@@ -8,6 +8,7 @@ import {
   Minus,
   Plus,
   Sparkles,
+  Star,
   UtensilsCrossed,
   Wand2,
   X,
@@ -17,13 +18,14 @@ import { buildMissingFoodIssueUrl } from '../config/feedback'
 import { QUICK_MEAL_SUGGESTIONS } from '../data/iranianFoods'
 import {
   getMealTypeLabels,
-  MEAL_TYPE_ORDER,
+  getMealTypes,
   type FoodItem,
   type LoggedFoodEntry,
   type MealScheduleMode,
   type MealTemplate,
   type MealType,
   type ParsedFoodItem,
+  type UserGoals,
 } from '../types/nutrition'
 import { computeRecentAndFrequentFoods } from '../utils/foodSuggestions'
 import {
@@ -45,6 +47,8 @@ interface QuickEntryBarProps {
   recentEntries: LoggedFoodEntry[]
   templates: MealTemplate[]
   totalLoggedCount: number
+  goals: UserGoals
+  onUpdateGoals: (goals: UserGoals) => void
   scheduleMode?: MealScheduleMode
   inputText: string
   onInputTextChange: (next: string) => void
@@ -67,7 +71,7 @@ interface ChipOverride {
   disambiguated?: boolean
 }
 
-type QuickChipTab = 'frequent' | 'recent' | 'samples'
+type QuickChipTab = 'frequent' | 'recent' | 'samples' | 'personal'
 
 const EMPTY_OVERRIDES: Record<string, ChipOverride> = {}
 
@@ -75,6 +79,8 @@ export const QuickEntryBar = memo(function QuickEntryBar({
   foods,
   recentEntries,
   templates,
+  goals,
+  onUpdateGoals,
   scheduleMode = 'standard',
   inputText,
   onInputTextChange,
@@ -95,7 +101,9 @@ export const QuickEntryBar = memo(function QuickEntryBar({
   }>({ text: '', map: {} })
   const [chipTab, setChipTab] = useState<QuickChipTab>('frequent')
 
-  const mealLabels = getMealTypeLabels(scheduleMode)
+  const mealTypes = getMealTypes(goals.extraSnackCount ?? 0)
+  const mealLabels = getMealTypeLabels(scheduleMode, goals.customMealLabels)
+  const quickFavorites = goals.quickFavorites ?? []
 
   const activeOverrides =
     overridesByInput.text === inputText ? overridesByInput.map : EMPTY_OVERRIDES
@@ -169,11 +177,17 @@ export const QuickEntryBar = memo(function QuickEntryBar({
   }, [previewItems])
 
   const effectiveChipTab: QuickChipTab =
-    chipTab === 'frequent' && frequentFoods.length > 0
-      ? 'frequent'
-      : chipTab !== 'samples' && recentFoods.length > 0
-        ? 'recent'
-        : 'samples'
+    chipTab === 'personal'
+      ? 'personal'
+      : chipTab === 'frequent' && frequentFoods.length > 0
+        ? 'frequent'
+        : chipTab !== 'samples' && recentFoods.length > 0
+          ? 'recent'
+          : chipTab === 'samples'
+            ? 'samples'
+            : quickFavorites.length > 0
+              ? 'personal'
+              : 'samples'
 
   const suggestionPills = useMemo(() => {
     const seen = new Set<string>()
@@ -310,7 +324,7 @@ export const QuickEntryBar = memo(function QuickEntryBar({
   }
 
   const handleMealRadioKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
-    const last = MEAL_TYPE_ORDER.length - 1
+    const last = mealTypes.length - 1
     let next = index
     // RTL: ArrowLeft moves to the next meal to the visual left, ArrowRight back.
     if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next = index + 1
@@ -320,7 +334,7 @@ export const QuickEntryBar = memo(function QuickEntryBar({
     else return
     e.preventDefault()
     const target = Math.min(last, Math.max(0, next))
-    onMealTypeChange(MEAL_TYPE_ORDER[target])
+    onMealTypeChange(mealTypes[target])
     mealRadioRefs.current[target]?.focus()
   }
 
@@ -395,7 +409,7 @@ export const QuickEntryBar = memo(function QuickEntryBar({
             aria-label="انتخاب وعده غذایی"
             className="inline-flex items-center rounded-xl bg-[#0C0C0D] p-1 border border-[#26262A]"
           >
-            {MEAL_TYPE_ORDER.map((type, index) => {
+            {mealTypes.map((type, index) => {
               const active = mealType === type
               return (
                 <button
@@ -735,6 +749,32 @@ export const QuickEntryBar = memo(function QuickEntryBar({
         </div>
       )}
 
+      {/* Quick meal-slot access (including optional extra snacks) */}
+      <div className="mt-3 pt-3 border-t border-[#222226]" data-testid="quick-meal-slots">
+        <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 mb-2">
+          <UtensilsCrossed className="w-3.5 h-3.5 text-emerald-400" />
+          <span>انتخاب سریع وعده (شامل میان\u200cوعدهها):</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {mealTypes.map((type) => (
+            <button
+              key={type}
+              type="button"
+              data-testid={`quick-meal-slot-${type}`}
+              aria-pressed={mealType === type}
+              onClick={() => onMealTypeChange(type)}
+              className={`rounded-full px-3 py-1.5 text-xs transition-colors border ${
+                mealType === type
+                  ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-200 font-semibold'
+                  : 'bg-[#1E1E22] border-[#2B2B31] text-zinc-300 hover:text-zinc-100'
+              }`}
+            >
+              {mealLabels[type]}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Frequent, Recent & Sample Quick-Tap Pills */}
       <div className="mt-3 pt-3 border-t border-[#222226]">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
@@ -743,8 +783,7 @@ export const QuickEntryBar = memo(function QuickEntryBar({
             <span>انتخاب سریع با یک لمس:</span>
           </div>
 
-          {(frequentFoods.length > 0 || recentFoods.length > 0) && (
-            <div className="inline-flex items-center gap-1 text-[11px]">
+          <div className="inline-flex items-center gap-1 text-[11px]">
               {frequentFoods.length > 0 && (
                 <button
                   type="button"
@@ -787,8 +826,20 @@ export const QuickEntryBar = memo(function QuickEntryBar({
               >
                 نمونه وعده‌ها
               </button>
-            </div>
-          )}
+              <button
+                type="button"
+                aria-pressed={effectiveChipTab === 'personal'}
+                onClick={() => setChipTab('personal')}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md transition-colors ${
+                  effectiveChipTab === 'personal'
+                    ? 'bg-emerald-500/15 text-emerald-300 font-semibold'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <Star className="w-3 h-3" />
+                <span>شخصی</span>
+              </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
@@ -832,6 +883,38 @@ export const QuickEntryBar = memo(function QuickEntryBar({
                 {pill}
               </button>
             ))}
+
+          {effectiveChipTab === 'personal' &&
+            quickFavorites.map((id) => {
+              const food = foods.find((f) => f.id === id)
+              return (
+                <span
+                  key={id}
+                  className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 px-3 py-1.5 text-xs text-emerald-200"
+                >
+                  <button
+                    type="button"
+                    data-testid="personal-food-chip"
+                    onClick={() => food && handleAppendQuickFood(food, food.defaultUnit)}
+                  >
+                    + {food?.name ?? id}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`حذف ${food?.name ?? id} از لیست شخصی`}
+                    onClick={() =>
+                      onUpdateGoals({
+                        ...goals,
+                        quickFavorites: quickFavorites.filter((f) => f !== id),
+                      })
+                    }
+                    className="text-zinc-400 hover:text-rose-400"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )
+            })}
         </div>
       </div>
     </section>

@@ -39,7 +39,7 @@ export function buildPersianDailyReport({
   waterGlasses,
   entries,
 }: DailyReportParams): string {
-  const mealLabels = getMealTypeLabels(goals.scheduleMode)
+  const mealLabels = getMealTypeLabels(goals.scheduleMode, goals.customMealLabels)
   const remaining = goals.dailyKcal - consumed.kcal
   const balanceLine =
     remaining >= 0

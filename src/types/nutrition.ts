@@ -6,7 +6,7 @@ export type FoodCategory =
   | 'breakfast_dairy'
   | 'drinks_snacks'
 
-export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack'
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'snack2' | 'snack3'
 
 export type MealScheduleMode = 'standard' | 'ramadan' | 'fasting_16_8'
 
@@ -319,6 +319,12 @@ export interface UserGoals {
   fiberGrams?: number
   waterGoalGlasses: number
   scheduleMode?: MealScheduleMode
+  /** User-renamed meal labels (override the schedule-mode preset labels). */
+  customMealLabels?: Partial<Record<MealType, string>>
+  /** Number of extra snack slots enabled in settings (0..2). */
+  extraSnackCount?: number
+  /** Food IDs pinned by the user in the quick-access personal list. */
+  quickFavorites?: string[]
   /** Optional biological profile for personalized micronutrient RDAs (e.g. 8mg vs 18mg Iron) */
   sex?: 'male' | 'female'
   ageYears?: number
@@ -345,6 +351,8 @@ export const MEAL_TYPE_LABELS: Record<MealType, string> = {
   lunch: 'ناهار',
   dinner: 'شام',
   snack: 'میان‌وعده',
+  snack2: 'میان‌وعده دوم',
+  snack3: 'میان‌وعده سوم',
 }
 
 export const RAMADAN_MEAL_TYPE_LABELS: Record<MealType, string> = {
@@ -352,6 +360,8 @@ export const RAMADAN_MEAL_TYPE_LABELS: Record<MealType, string> = {
   lunch: 'افطاری',
   dinner: 'شام',
   snack: 'میان‌وعده شبانه',
+  snack2: 'میان‌وعده دوم',
+  snack3: 'میان‌وعده سوم',
 }
 
 export const FASTING_16_8_MEAL_TYPE_LABELS: Record<MealType, string> = {
@@ -359,14 +369,28 @@ export const FASTING_16_8_MEAL_TYPE_LABELS: Record<MealType, string> = {
   lunch: 'وعده اصلی',
   dinner: 'وعده پایانی پنجره',
   snack: 'میان‌وعده در پنجره',
+  snack2: 'میان‌وعده دوم',
+  snack3: 'میان‌وعده سوم',
 }
 
 export function getMealTypeLabels(
   mode: MealScheduleMode = 'standard',
+  customLabels?: Partial<Record<MealType, string>>,
 ): Record<MealType, string> {
-  if (mode === 'ramadan') return RAMADAN_MEAL_TYPE_LABELS
-  if (mode === 'fasting_16_8') return FASTING_16_8_MEAL_TYPE_LABELS
-  return MEAL_TYPE_LABELS
+  const base = mode === 'ramadan'
+    ? RAMADAN_MEAL_TYPE_LABELS
+    : mode === 'fasting_16_8'
+      ? FASTING_16_8_MEAL_TYPE_LABELS
+      : MEAL_TYPE_LABELS
+  return { ...base, ...(customLabels ?? {}) }
+}
+
+/** Meal slots shown in the UI. Extra snack slots are opt-in via settings. */
+export function getMealTypes(extraSnackCount = 0): MealType[] {
+  const slots: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack']
+  if (extraSnackCount >= 1) slots.push('snack2')
+  if (extraSnackCount >= 2) slots.push('snack3')
+  return slots
 }
 
 /** Suggested share of daily kcal per meal slot for gentle budgeting hints. */
@@ -375,19 +399,25 @@ export const MEAL_BUDGET_RATIOS: Record<MealScheduleMode, Record<MealType, numbe
     breakfast: 0.25,
     lunch: 0.38,
     dinner: 0.27,
-    snack: 0.1,
+    snack: 0.06,
+    snack2: 0.03,
+    snack3: 0.01,
   },
   ramadan: {
     breakfast: 0.35, // سحری
     lunch: 0.35, // افطاری
     dinner: 0.2, // شام سبک
-    snack: 0.1, // میان‌وعده شبانه
+    snack: 0.06, // میان‌وعده شبانه
+    snack2: 0.03,
+    snack3: 0.01,
   },
   fasting_16_8: {
     breakfast: 0.3, // وعده اول
     lunch: 0.4, // وعده اصلی
     dinner: 0.2, // وعده پایانی
-    snack: 0.1, // میان‌وعده
+    snack: 0.06, // میان‌وعده
+    snack2: 0.03,
+    snack3: 0.01,
   },
 }
 

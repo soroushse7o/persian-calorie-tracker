@@ -75,7 +75,7 @@ export function WeeklyTrendsTab({
   const [historyQuery, setHistoryQuery] = useState('')
   const [weeklyCopied, setWeeklyCopied] = useState(false)
 
-  const mealLabels = getMealTypeLabels(goals.scheduleMode)
+  const mealLabels = getMealTypeLabels(goals.scheduleMode, goals.customMealLabels)
   const days = useMemo(() => getLastNDays(rangeDays, dateFromKey(todayKey)), [rangeDays, todayKey])
   const last7Days = useMemo(() => getLastNDays(7, dateFromKey(todayKey)), [todayKey])
 

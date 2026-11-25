@@ -15,7 +15,7 @@ import { useMemo, useState } from 'react'
 import {
   getMealTypeLabels,
   MEAL_BUDGET_RATIOS,
-  MEAL_TYPE_ORDER,
+  getMealTypes,
   type FoodItem,
   type LoggedFoodEntry,
   type MealType,
@@ -52,6 +52,8 @@ const MEAL_ICONS: Record<MealType, typeof Sun> = {
   lunch: Sun,
   dinner: Moon,
   snack: Sunset,
+  snack2: Coffee,
+  snack3: Sunset,
 }
 
 export function TodayMealsList({
@@ -72,7 +74,8 @@ export function TodayMealsList({
   const [customSourceDay, setCustomSourceDay] = useState<string | null>(null)
 
   const scheduleMode = goals.scheduleMode ?? 'standard'
-  const mealLabels = getMealTypeLabels(scheduleMode)
+  const mealTypes = getMealTypes(goals.extraSnackCount ?? 0)
+  const mealLabels = getMealTypeLabels(scheduleMode, goals.customMealLabels)
   const budgetRatios = MEAL_BUDGET_RATIOS[scheduleMode]
 
   const foodById = useMemo(() => new Map(foods.map((f) => [f.id, f])), [foods])
@@ -105,6 +108,8 @@ export function TodayMealsList({
       lunch: [],
       dinner: [],
       snack: [],
+      snack2: [],
+      snack3: [],
     }
     for (const entry of dayEntries) {
       map[entry.mealType]?.push(entry)
@@ -118,13 +123,15 @@ export function TodayMealsList({
       lunch: [],
       dinner: [],
       snack: [],
+      snack2: [],
+      snack3: [],
     }
     for (const entry of allEntries) {
       if (entry.dateKey === activeCopySourceDay) {
         map[entry.mealType]?.push(entry)
       }
     }
-    return MEAL_TYPE_ORDER.map((type) => ({
+    return mealTypes.map((type) => ({
       mealType: type,
       items: map[type],
       totalKcal: map[type].reduce((sum, e) => sum + e.kcal, 0),
@@ -203,7 +210,7 @@ export function TodayMealsList({
         </div>
       ) : (
         <div className="space-y-3" data-testid="logged-meals-list">
-          {MEAL_TYPE_ORDER.map((mealType) => {
+          {mealTypes.map((mealType) => {
             const items = groupedToday[mealType]
             if (items.length === 0) return null
 
@@ -450,7 +457,7 @@ export function TodayMealsList({
                             </div>
 
                             <div className="flex items-center gap-1">
-                              {MEAL_TYPE_ORDER.map((mt) => (
+                              {mealTypes.map((mt) => (
                                 <button
                                   key={mt}
                                   type="button"
