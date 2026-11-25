@@ -586,6 +586,7 @@ export function WeeklyTrendsTab({
             id="history-search-input"
             value={historyQuery}
             onChange={(e) => setHistoryQuery(e.target.value)}
+            aria-label="جستجوی تاریخچه وعدهها"
             placeholder="مثلاً: قورمه‌سبزی، سنگک، ناهار، سحری، آبان..."
             className="w-full rounded-xl bg-[#0C0C0D] border border-[#2C2C33] focus:border-emerald-500/70 focus:outline-none pr-10 pl-3.5 py-2.5 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-500"
           />

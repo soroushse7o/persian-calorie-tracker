@@ -252,6 +252,22 @@ describe(`Persian Food Parser Golden Corpus (${GOLDEN_SENTENCES.length} real-wor
     expect(GOLDEN_SENTENCES.length).toBeGreaterThanOrEqual(200)
   })
 
+  it('keeps nutrition totals finite and consistent with per-100g scaling in golden cases', () => {
+    for (const { sentence } of GOLDEN_SENTENCES.slice(0, 30)) {
+      const result = parsePersianFoodInput(sentence, DEFAULT_IRANIAN_FOODS)
+      expect(result.items.length).toBeGreaterThan(0)
+      for (const item of result.items) {
+        expect(Number.isFinite(item.kcal)).toBe(true)
+        expect(item.kcal).toBeGreaterThan(0)
+        const scaled = Math.round((item.food.per100g.kcal * item.totalGrams) / 100)
+        expect(Math.abs(item.kcal - scaled)).toBeLessThanOrEqual(1)
+        expect(Number.isFinite(item.protein)).toBe(true)
+        expect(Number.isFinite(item.carbs)).toBe(true)
+        expect(Number.isFinite(item.fat)).toBe(true)
+      }
+    }
+  })
+
   it.each(GOLDEN_SENTENCES)(
     'parses: "$sentence"',
     ({ sentence, expectedFoodIds, expectedFirstQty, expectedFirstUnit, expectAmbiguousFirst }) => {

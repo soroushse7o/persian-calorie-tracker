@@ -24,6 +24,8 @@ interface SettingsTabProps {
   onThemeChange: (next: ThemeMode) => void
   onUpdateGoals: (goals: UserGoals) => void
   onExportJson: () => string
+  onBuildBackupJson: () => string
+  onMarkBackedUp: () => void
   onExportCsv: () => string
   onPreviewBackupJson: (raw: string) => BackupAnalysisResult
   onImportJson: (
@@ -65,6 +67,8 @@ export function SettingsTab({
   onThemeChange,
   onUpdateGoals,
   onExportJson,
+  onBuildBackupJson,
+  onMarkBackedUp,
   onExportCsv,
   onPreviewBackupJson,
   onImportJson,
@@ -90,6 +94,7 @@ export function SettingsTab({
             <button
               key={tab.id}
               type="button"
+              aria-pressed={active}
               data-testid={`settings-filter-${tab.id}`}
               onClick={() => setSectionFilter(tab.id)}
               className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
@@ -134,6 +139,8 @@ export function SettingsTab({
           preImportSavedAt={preImportSavedAt}
           persistenceState={persistenceState}
           onExportJson={onExportJson}
+          onBuildBackupJson={onBuildBackupJson}
+          onMarkBackedUp={onMarkBackedUp}
           onExportCsv={onExportCsv}
           onPreviewBackupJson={onPreviewBackupJson}
           onImportJson={onImportJson}

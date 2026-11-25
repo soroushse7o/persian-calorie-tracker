@@ -281,6 +281,7 @@ export function SingleFoodForm({
                 id={idx === 0 ? 'food-unit-name-0' : undefined}
                 value={u.name}
                 onChange={(e) => handleUnitChange(idx, 'name', e.target.value)}
+                aria-label="نام واحد"
                 placeholder="مثلاً: ملاقه، کفگیر، پیمانه"
                 className="flex-1 min-w-0 rounded-xl bg-[#0C0C0D] border border-[#2C2C33] focus:border-emerald-500/70 focus:outline-none px-3 py-2 text-xs sm:text-sm text-zinc-100"
               />
@@ -290,6 +291,7 @@ export function SingleFoodForm({
                 id={idx === 0 ? 'food-unit-grams-0' : undefined}
                 value={u.grams}
                 onChange={(e) => handleUnitChange(idx, 'grams', e.target.value)}
+                aria-label="وزن واحد به گرم"
                 placeholder="گرم"
                 className="w-24 rounded-xl bg-[#0C0C0D] border border-[#2C2C33] focus:border-emerald-500/70 focus:outline-none px-3 py-2 text-xs sm:text-sm text-zinc-100 tabular-nums-fa"
               />

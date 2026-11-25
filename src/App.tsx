@@ -114,6 +114,8 @@ export function App() {
     updateGoals,
     clearAllEntries,
     exportBackupJson,
+    buildBackupJson,
+    markBackedUp,
     exportEntriesCsv,
     previewBackupJson,
     importBackupJson,
@@ -858,6 +860,8 @@ export function App() {
                 showToast('اهداف روزانه به‌روزرسانی شد')
               }}
               onExportJson={exportBackupJson}
+              onBuildBackupJson={buildBackupJson}
+              onMarkBackedUp={markBackedUp}
               onExportCsv={exportEntriesCsv}
               onPreviewBackupJson={previewBackupJson}
               onImportJson={importBackupJson}

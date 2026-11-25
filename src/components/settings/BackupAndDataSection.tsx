@@ -35,6 +35,8 @@ interface BackupAndDataSectionProps {
   preImportSavedAt: number | null
   persistenceState: 'checking' | 'persisted' | 'not_persisted' | 'unsupported'
   onExportJson: () => string
+  onBuildBackupJson: () => string
+  onMarkBackedUp: () => void
   onExportCsv: () => string
   onPreviewBackupJson: (raw: string) => BackupAnalysisResult
   onImportJson: (
@@ -55,6 +57,8 @@ export function BackupAndDataSection({
   preImportSavedAt,
   persistenceState,
   onExportJson,
+  onBuildBackupJson,
+  onMarkBackedUp,
   onExportCsv,
   onPreviewBackupJson,
   onImportJson,
@@ -108,13 +112,14 @@ export function BackupAndDataSection({
   const handleExportEncryptedJson = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const plain = onExportJson()
+      const plain = onBuildBackupJson()
       const encrypted = await encryptBackupJson(plain, encryptPassword)
       triggerDownload(
         encrypted,
         'application/json;charset=utf-8',
         `kalorishomar-encrypted-${getLocalDateKey()}.enc.json`,
       )
+      onMarkBackedUp()
       setEncryptPassword('')
       setEncryptOpen(false)
       setBackupMessage({
@@ -323,6 +328,7 @@ export function BackupAndDataSection({
                 minLength={4}
                 value={encryptPassword}
                 onChange={(e) => setEncryptPassword(e.target.value)}
+                aria-label="رمز عبور جدید پشتیبان"
                 placeholder="رمز عبور دلخواه (حداقل ۴ نویسه)"
                 className="flex-1 rounded-xl bg-[#161618] border border-[#2E2E36] px-3 py-2 text-xs text-zinc-100"
               />
@@ -351,6 +357,7 @@ export function BackupAndDataSection({
                 required
                 value={decryptPassword}
                 onChange={(e) => setDecryptPassword(e.target.value)}
+                aria-label="رمز عبور فایل پشتیبان"
                 placeholder="رمز عبور فایل پشتیبان"
                 className="flex-1 rounded-xl bg-[#161618] border border-[#2E2E36] px-3 py-2 text-xs text-zinc-100"
               />

@@ -298,6 +298,7 @@ export function TodayMealsList({
                       data-testid="template-name-input"
                       value={templateName}
                       onChange={(e) => setTemplateName(e.target.value)}
+                      aria-label="نام قالب وعده"
                       placeholder="نام قالب وعده (مثلاً: ناهار قورمه)"
                       className="flex-1 min-w-0 rounded-lg bg-[#0C0C0D] border border-[#2E2E35] focus:border-emerald-500/70 focus:outline-none px-2.5 py-1.5 text-xs text-zinc-100"
                     />

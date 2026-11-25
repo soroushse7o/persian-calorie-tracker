@@ -70,6 +70,22 @@ export type BackupReminderLevel = 'none' | 'gentle' | 'urgent'
 interface PreImportSnapshotEnvelope {
   savedAt: number
   snapshot: StoreDomainSnapshot
+  lastBackupAt?: number | null
+}
+
+function mergeById<T extends { id: string }>(local: T[], idb: T[]): T[] {
+  const byId = new Map<string, T>()
+  for (const item of [...idb, ...local]) byId.set(item.id, item)
+  return [...byId.values()]
+}
+
+function mergeEntries(local: LoggedFoodEntry[], idb: LoggedFoodEntry[]): LoggedFoodEntry[] {
+  const byId = new Map<string, LoggedFoodEntry>()
+  for (const item of [...idb, ...local]) {
+    const existing = byId.get(item.id)
+    if (!existing || (item.timestamp ?? 0) > (existing.timestamp ?? 0)) byId.set(item.id, item)
+  }
+  return [...byId.values()]
 }
 
 function generateId(prefix: string): string {
@@ -169,6 +185,8 @@ export function useNutritionStore() {
     templates,
   })
   const hydratedKeysRef = useRef<Set<string>>(new Set())
+  const pendingWritesRef = useRef<Map<string, unknown>>(new Map())
+  const persistTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
     entriesRef.current = entries
@@ -200,51 +218,36 @@ export function useNutritionStore() {
       const snap = snapshotRef.current
 
       const idbEntries = sanitizeEntryList(idbMap[STORAGE_KEYS.entries])
-      if (snap.entries.length === 0 && idbEntries.length > 0) {
-        setEntries(idbEntries)
-      } else if (snap.entries.length > 0 && idbEntries.length === 0) {
-        void idbSet(STORAGE_KEYS.entries, snap.entries)
+      if (idbEntries.length > 0) {
+        setEntries((prev) => mergeEntries(prev, idbEntries))
       }
 
       const idbCustom = sanitizeFoodList(idbMap[STORAGE_KEYS.customFoods]).map((f) => ({
         ...f,
         isCustom: true,
       }))
-      if (snap.customFoods.length === 0 && idbCustom.length > 0) {
-        setCustomFoods(idbCustom)
-      } else if (snap.customFoods.length > 0 && idbCustom.length === 0) {
-        void idbSet(STORAGE_KEYS.customFoods, snap.customFoods)
+      if (idbCustom.length > 0) {
+        setCustomFoods((prev) => mergeById(prev, idbCustom))
       }
 
       const idbOverrides = sanitizeFoodOverrides(idbMap[STORAGE_KEYS.foodOverrides])
-      if (Object.keys(snap.foodOverrides).length === 0 && Object.keys(idbOverrides).length > 0) {
-        setFoodOverrides(idbOverrides)
-      } else if (
-        Object.keys(snap.foodOverrides).length > 0 &&
-        Object.keys(idbOverrides).length === 0
-      ) {
-        void idbSet(STORAGE_KEYS.foodOverrides, snap.foodOverrides)
+      if (Object.keys(idbOverrides).length > 0) {
+        setFoodOverrides((prev) => ({ ...idbOverrides, ...prev }))
       }
 
       const idbWeights = sanitizeWeightList(idbMap[STORAGE_KEYS.weights])
-      if (snap.weights.length === 0 && idbWeights.length > 0) {
-        setWeights(idbWeights)
-      } else if (snap.weights.length > 0 && idbWeights.length === 0) {
-        void idbSet(STORAGE_KEYS.weights, snap.weights)
+      if (idbWeights.length > 0) {
+        setWeights((prev) => sanitizeWeightList([...prev, ...idbWeights]))
       }
 
       const idbWater = sanitizeWaterMap(idbMap[STORAGE_KEYS.water])
-      if (Object.keys(snap.waterByDate).length === 0 && Object.keys(idbWater).length > 0) {
-        setWaterByDate(idbWater)
-      } else if (Object.keys(snap.waterByDate).length > 0 && Object.keys(idbWater).length === 0) {
-        void idbSet(STORAGE_KEYS.water, snap.waterByDate)
+      if (Object.keys(idbWater).length > 0) {
+        setWaterByDate((prev) => ({ ...idbWater, ...prev }))
       }
 
       const idbTemplates = sanitizeTemplateList(idbMap[STORAGE_KEYS.templates])
-      if (snap.templates.length === 0 && idbTemplates.length > 0) {
-        setTemplates(idbTemplates)
-      } else if (snap.templates.length > 0 && idbTemplates.length === 0) {
-        void idbSet(STORAGE_KEYS.templates, snap.templates)
+      if (idbTemplates.length > 0) {
+        setTemplates((prev) => mergeById(prev, idbTemplates))
       }
 
       if (
@@ -276,6 +279,23 @@ export function useNutritionStore() {
     }
   }, [theme])
 
+  const flushPersistedWrites = useCallback(() => {
+    if (persistTimerRef.current !== null) {
+      window.clearTimeout(persistTimerRef.current)
+      persistTimerRef.current = null
+    }
+    const pending = pendingWritesRef.current
+    if (pending.size === 0) return
+    pendingWritesRef.current = new Map()
+    for (const [key, value] of pending) {
+      const res = writeStorageJson(key, value)
+      if (!res.ok) {
+        const msg = res.error ?? 'خطا در ذخیره‌سازی محلی'
+        queueMicrotask(() => setStorageError(msg))
+      }
+    }
+  }, [])
+
   const persistOnChange = useCallback(<T,>(key: string, value: T) => {
     if (!hydratedKeysRef.current.has(key)) {
       hydratedKeysRef.current.add(key)
@@ -283,14 +303,30 @@ export function useNutritionStore() {
         return
       }
     }
-    const res = writeStorageJson(key, value)
-    // Always persist to IndexedDB even if localStorage hits 5MB quota!
+    // IndexedDB stays the immediate durable sink; localStorage writes are coalesced.
     void idbSet(key, value)
-    if (!res.ok) {
-      const msg = res.error ?? 'خطا در ذخیره‌سازی محلی'
-      queueMicrotask(() => setStorageError(msg))
+    pendingWritesRef.current.set(key, value)
+    if (typeof window === 'undefined') return
+    if (persistTimerRef.current !== null) window.clearTimeout(persistTimerRef.current)
+    persistTimerRef.current = window.setTimeout(() => {
+      persistTimerRef.current = null
+      flushPersistedWrites()
+    }, 300)
+  }, [flushPersistedWrites])
+
+  useEffect(() => {
+    const flush = () => flushPersistedWrites()
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush()
     }
-  }, [])
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', onVisibility)
+      flush()
+    }
+  }, [flushPersistedWrites])
 
   useEffect(() => {
     persistOnChange(STORAGE_KEYS.customFoods, customFoods)
@@ -634,11 +670,19 @@ export function useNutritionStore() {
     setWeights([])
   }, [])
 
-  const exportBackupJson = useCallback((): string => {
-    const json = serializeBackupPayload(snapshotRef.current, foods, STORAGE_SCHEMA_VERSION)
-    setLastBackupAt(Date.now())
-    return json
+  const buildBackupJson = useCallback((): string => {
+    return serializeBackupPayload(snapshotRef.current, foods, STORAGE_SCHEMA_VERSION)
   }, [foods])
+
+  const markBackedUp = useCallback(() => {
+    setLastBackupAt(Date.now())
+  }, [])
+
+  const exportBackupJson = useCallback((): string => {
+    const json = buildBackupJson()
+    markBackedUp()
+    return json
+  }, [buildBackupJson, markBackedUp])
 
   const exportEntriesCsv = useCallback((): string => {
     return buildEntriesCsv(entries, foods, goals.scheduleMode ?? 'standard', goals.customMealLabels)
@@ -662,6 +706,7 @@ export function useNutritionStore() {
       const preEnvelope: PreImportSnapshotEnvelope = {
         savedAt: now,
         snapshot: snapshotRef.current,
+        lastBackupAt: readStorageJson<number | null>(STORAGE_KEYS.lastBackupAt, null),
       }
       const snapWrite = writeStorageJson(STORAGE_KEYS.preImportSnapshot, preEnvelope)
       void idbSet(STORAGE_KEYS.preImportSnapshot, preEnvelope)
@@ -706,6 +751,7 @@ export function useNutritionStore() {
     setWaterByDate(sanitizeWaterMap(raw.snapshot.waterByDate))
     setWeights(sanitizeWeightList(raw.snapshot.weights))
     setTemplates(sanitizeTemplateList(raw.snapshot.templates))
+    setLastBackupAt(raw.lastBackupAt ?? null)
     return true
   }, [])
 
@@ -747,6 +793,8 @@ export function useNutritionStore() {
     updateGoals,
     clearAllEntries,
     exportBackupJson,
+    buildBackupJson,
+    markBackedUp,
     exportEntriesCsv,
     previewBackupJson,
     importBackupJson,

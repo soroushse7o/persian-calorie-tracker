@@ -102,7 +102,10 @@ describe('v1.2.0 — 10 Quality & UX Upgrades Suite', () => {
         { quantity: 2 },
         DEFAULT_IRANIAN_FOODS,
       )
-      expect(updated.kcal).toBeCloseTo(item.kcal * 2, -1)
+      const exactDoubledKcal = Math.round(
+        (item.food.per100g.kcal * item.totalGrams * 2) / 100,
+      )
+      expect(updated.kcal).toBe(exactDoubledKcal)
       expect(updated.fiber).toBeGreaterThan(0)
     })
   })
@@ -146,8 +149,11 @@ describe('v1.2.0 — 10 Quality & UX Upgrades Suite', () => {
       expect(grid.days.length).toBeGreaterThanOrEqual(29)
       expect(grid.days.length).toBeLessThanOrEqual(31)
       expect(grid.days[0]?.jalaliDay).toBe(1)
-      expect(grid.leadingEmptyCells).toBeGreaterThanOrEqual(0)
-      expect(grid.leadingEmptyCells).toBeLessThan(7)
+      expect(grid.days[0]?.dateKey).toBe(grid.firstDayDateKey)
+      expect(grid.days[grid.days.length - 1]?.dateKey).toBe(grid.lastDayDateKey)
+      expect(grid.leadingEmptyCells).toBe(
+        (new Date(`${grid.firstDayDateKey}T12:00:00`).getDay() + 1) % 7,
+      )
 
       const todayCell = grid.days.find((d) => d.dateKey === '2026-11-24')
       expect(todayCell?.isToday).toBe(true)

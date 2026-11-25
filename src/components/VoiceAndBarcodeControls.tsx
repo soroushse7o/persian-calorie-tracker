@@ -642,6 +642,7 @@ export function VoiceAndBarcodeControls({
                     setOnlineResult(null)
                     setOnlineError(null)
                   }}
+                  aria-label="شماره بارکد"
                   placeholder="شماره بارکد روی بسته (مثلاً ۶۲۶۰۱۰۱۲۰۰۱۱۲)"
                   className="flex-1 rounded-xl bg-[#0C0C0D] border border-[#2C2C33] focus:border-emerald-500/70 focus:outline-none px-3 py-2.5 text-xs sm:text-sm text-zinc-100 tabular-nums-fa"
                 />

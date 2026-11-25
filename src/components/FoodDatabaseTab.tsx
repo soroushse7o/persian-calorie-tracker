@@ -271,6 +271,7 @@ export function FoodDatabaseTab({
             id="food-db-search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="جستجوی غذاها"
             placeholder="جستجوی نام غذا، واحد یا بارکد (مثلاً: قورمه‌سبزی، سنگک، ساقه‌طلایی، 626...)"
             className="w-full rounded-xl bg-[#0C0C0D] border border-[#2A2A30] focus:border-emerald-500/70 focus:outline-none pr-10 pl-3.5 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500"
           />

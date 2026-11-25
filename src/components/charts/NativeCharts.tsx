@@ -70,6 +70,8 @@ export function CalorieBarChart({
         role="img"
         aria-label="نمودار میله‌ای روند کالری"
       >
+        <title>نمودار میله‌ای روند کالری</title>
+        <desc>نمودار قابل دسترس برای صفحهخوان؛ مقادیر در متن خلاصهٔ وعدهها موجود است.</desc>
         {yTicks.map((tick) => {
           const y = yFor(tick)
           return (
@@ -131,7 +133,18 @@ export function CalorieBarChart({
             <g
               key={entry.dateKey}
               className="cursor-pointer"
+              role="button"
+              tabIndex={0}
+              aria-label={`انتخاب تاریخ ${entry.dateKey}`}
               onMouseEnter={() => setActiveIndex(idx)}
+              onFocus={() => setActiveIndex(idx)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setActiveIndex(idx)
+                  onSelectDate?.(entry.dateKey)
+                }
+              }}
               onClick={() => {
                 setActiveIndex(idx)
                 onSelectDate?.(entry.dateKey)
@@ -686,6 +699,8 @@ export function MacroStackedBarChart({
         role="img"
         aria-label="نمودار انباشته روزانه درشت‌مغذی‌ها"
       >
+        <title>نمودار انباشته روزانه درشت‌مغذی‌ها</title>
+        <desc>نمودار قابل دسترس برای صفحهخوان؛ مقادیر در متن خلاصهٔ وعدهها موجود است.</desc>
         {[0, Math.round(safeMax / 2), safeMax].map((tick) => {
           const y = padTop + plotH - (tick / safeMax) * plotH
           return (
@@ -867,6 +882,8 @@ export function MicronutrientRadarChart({
         role="img"
         aria-label="نمودار راداری پوشش ویتامین‌ها و املاح معدنی"
       >
+        <title>نمودار راداری پوشش ویتامین‌ها و املاح معدنی</title>
+        <desc>نمودار قابل دسترس برای صفحهخوان؛ مقادیر در متن خلاصهٔ وعدهها موجود است.</desc>
         {rings.map((ringPct) => {
           const pts = radarItems
             .map((_, idx) => {
