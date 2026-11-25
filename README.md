@@ -8,6 +8,8 @@
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fsoroushse7o%2Fpersian-calorie-tracker&project-name=persian-calorie-tracker&repository-name=persian-calorie-tracker&env=VITE_SITE_URL&envDescription=Canonical%20public%20HTTPS%20URL%20for%20OpenGraph%20and%20sitemap)
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https%3A%2F%2Fgithub.com%2Fsoroushse7o%2Fpersian-calorie-tracker)
 
+[🌐 Live on Vercel](https://persian-calorie-tracker.vercel.app) • [🌐 Live on Railway](https://persian-calorie-tracker-production.up.railway.app/)
+
 [Changelog](./CHANGELOG.md) • [MIT License](./LICENSE) • [GitHub (@soroushse7o)](https://github.com/soroushse7o)
 
 </div>
@@ -65,6 +67,8 @@ npm run test:e2e                                           # تست E2E آفلا
 
 ### راهنمای استقرار (Deployment Guide)
 
+**نسخه‌های زنده (Live):** [Vercel](https://persian-calorie-tracker.vercel.app) • [Railway](https://persian-calorie-tracker-production.up.railway.app/)
+
 #### ۱. استقرار روی Vercel (پیشنهادی)
 1. در [vercel.com/new](https://vercel.com/new) مخزن GitHub را انتخاب کنید.
 2. در بخش **Environment Variables** متغیر الزامی `VITE_SITE_URL` را برابر دامنه عمومی پروژه قرار دهید.
@@ -116,6 +120,8 @@ npm run test:e2e                                           # offline Playwright 
 > **Important about `VITE_SITE_URL`:** under the strict production policy, `VITE_SITE_URL` is **required** at `npm run build` time and has no hidden fallback, so `og:image`, `og:url`, `canonical`, and `sitemap.xml` always use the absolute URL of the real production domain.
 
 ### Deployment Guide
+
+**Live deployments:** [Vercel](https://persian-calorie-tracker.vercel.app) • [Railway](https://persian-calorie-tracker-production.up.railway.app/)
 
 **1. Vercel (recommended)**
 1. Select the GitHub repository at [vercel.com/new](https://vercel.com/new).
