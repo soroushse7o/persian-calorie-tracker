@@ -66,6 +66,22 @@ npm run test:e2e                                           # تست E2E آفلا
 
 ---
 
+### نصب آفلاین روی موبایل (PWA)
+فونت و اجرای برنامه ۱۰۰٪ آفلاین است. برای باز شدن تمامصفحه و کارکرد آنی بدون اینترنت، برنامه را به صفحه اصلی گوشی اضافه کنید.
+
+#### راهنمای نصب در آیفون (iOS — Safari)
+1. آدرس برنامه را در **Safari** باز کنید.
+2. دکمه اشتراکگذاری (**Share**) در نوار پایین را لمس کنید.
+3. گزینه **Add to Home Screen** و سپس **Add** را انتخاب کنید.
+
+#### راهنمای نصب در اندروید (Google Chrome)
+1. آدرس برنامه را در **Google Chrome** باز کنید (از طریق HTTPS).
+2. منوی سهنقطه بالای سمت راست Chrome را باز کنید.
+3. گزینه **Install app** (یا **Add to Home screen**) را بزنید.
+4. نام میانبر را تأیید کرده و **Install** را لمس کنید.
+
+اگر گزینهٔ نصب در اندروید دیده نمیشود، Chrome را بهروز کنید و مطمئن شوید صفحه با HTTPS باز شده است.
+
 ### راهنمای استقرار (Deployment Guide)
 
 **نسخه‌های زنده (Live):** [Vercel](https://persian-calorie-tracker.vercel.app) • [Railway](https://persian-calorie-tracker-production.up.railway.app/)
@@ -125,6 +141,22 @@ npm run test:e2e                                           # offline Playwright 
 ```
 
 > **Important about `VITE_SITE_URL`:** under the strict production policy, `VITE_SITE_URL` is **required** at `npm run build` time and has no hidden fallback, so `og:image`, `og:url`, `canonical`, and `sitemap.xml` always use the absolute URL of the real production domain.
+
+### Offline Mobile Installation (PWA)
+The app and its self-hosted font run 100% offline. For full-screen, instant launching without internet, add it to your phone's home screen.
+
+**iPhone / iPad (Safari)**
+1. Open the app URL in **Safari**.
+2. Tap the **Share** button at the bottom.
+3. Choose **Add to Home Screen**, then **Add**.
+
+**Android (Google Chrome)**
+1. Open the app URL in **Google Chrome** (over HTTPS).
+2. Open Chrome's three-dot menu at the top right.
+3. Tap **Install app** (or **Add to Home screen**).
+4. Confirm the shortcut name and tap **Install**.
+
+If the install option is missing on Android, update Chrome and make sure the page is served over HTTPS.
 
 ### Deployment Guide
 

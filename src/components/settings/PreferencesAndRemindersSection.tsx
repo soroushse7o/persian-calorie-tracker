@@ -25,6 +25,7 @@ export function PreferencesAndRemindersSection({
     useState<LocalReminderSettings>(readReminderSettings)
   const [notifStatusText, setNotifStatusText] = useState<string | null>(null)
   const [showIosGuide, setShowIosGuide] = useState(() => pwaStatus.isIosInstallable)
+  const [showAndroidGuide, setShowAndroidGuide] = useState(false)
 
   const handleToggleReminders = async () => {
     const nextEnabled = !reminderSettings.enabled
@@ -218,11 +219,28 @@ export function PreferencesAndRemindersSection({
               <button
                 type="button"
                 id="toggle-ios-a2hs-btn"
-                onClick={() => setShowIosGuide((v) => !v)}
+                onClick={() => {
+                  setShowIosGuide((v) => !v)
+                  setShowAndroidGuide(false)
+                }}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-[#1E1E22] hover:bg-[#282830] border border-[#2E2E36] text-zinc-200 font-semibold text-xs px-3 py-2"
               >
                 <Share className="w-3.5 h-3.5 text-sky-400" />
                 <span>راهنمای نصب در آیفون (iOS)</span>
+              </button>
+            )}
+            {!pwaStatus.isInstalled && !pwaStatus.canInstall && (
+              <button
+                type="button"
+                id="toggle-android-a2hs-btn"
+                onClick={() => {
+                  setShowAndroidGuide((v) => !v)
+                  setShowIosGuide(false)
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#1E1E22] hover:bg-[#282830] border border-[#2E2E36] text-zinc-200 font-semibold text-xs px-3 py-2"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+                <span>راهنمای نصب در اندروید (Google Chrome)</span>
               </button>
             )}
           </div>
@@ -248,6 +266,35 @@ export function PreferencesAndRemindersSection({
                 <strong>Add</strong> را لمس کنید.
               </li>
             </ol>
+          </div>
+        )}
+
+        {!pwaStatus.isInstalled && showAndroidGuide && (
+          <div
+            data-testid="android-a2hs-guide"
+            className="rounded-xl bg-[#0C0C0D] border border-[#26262E] p-3.5 text-xs space-y-1.5 leading-relaxed"
+          >
+            <div className="font-semibold text-emerald-300">
+              مراحل نصب در اندروید (مرورگر Google Chrome):
+            </div>
+            <ol className="list-decimal list-inside text-zinc-300 space-y-1">
+              <li>
+                آدرس برنامه را در <strong>Google Chrome</strong> باز کنید (از طریق HTTPS).
+              </li>
+              <li>
+                روی منوی سهنقطه در بالای سمت راست Chrome بزنید.
+              </li>
+              <li>
+                گزینه <strong>Install app</strong> (یا <strong>Add to Home screen</strong>) را انتخاب کنید.
+              </li>
+              <li>
+                نام میانبر را تأیید کرده و <strong>Install</strong> را لمس کنید تا آیکون به صفحه اصلی اضافه شود.
+              </li>
+            </ol>
+            <p className="text-[11px] text-zinc-400">
+              اگر گزینهٔ نصب نمایش داده نشد، مطمئن شوید از نسخهٔ بهروز Chrome استفاده میکنید و صفحه
+              با HTTPS باز شده است. پس از نصب، برنامه تمامصفحه و بدون نیاز به اینترنت اجرا میشود.
+            </p>
           </div>
         )}
       </section>
