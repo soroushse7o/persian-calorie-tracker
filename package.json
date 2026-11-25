@@ -2,6 +2,9 @@
   "name": "persian-calorie-tracker",
   "private": true,
   "version": "1.4.0",
+  "engines": {
+    "node": ">=22"
+  },
   "type": "module",
   "license": "MIT",
   "author": {

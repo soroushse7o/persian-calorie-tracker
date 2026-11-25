@@ -6,7 +6,7 @@
 *Fast, 100% offline-first, mobile-first Persian Calorie & Nutrition Tracker built for Iranian home-cooked meals and real kitchen units.*
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fsoroushse7o%2Fpersian-calorie-tracker&project-name=persian-calorie-tracker&repository-name=persian-calorie-tracker&env=VITE_SITE_URL&envDescription=Canonical%20public%20HTTPS%20URL%20for%20OpenGraph%20and%20sitemap)
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https%3A%2F%2Fgithub.com%2Fsoroushse7o%2Fpersian-calorie-tracker)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/github/soroushse7o/persian-calorie-tracker-improved)
 
 [🌐 Live on Vercel](https://persian-calorie-tracker.vercel.app) • [🌐 Live on Railway](https://persian-calorie-tracker-production.up.railway.app/)
 
@@ -48,7 +48,7 @@
 ```bash
 git clone https://github.com/soroushse7o/persian-calorie-tracker.git
 cd persian-calorie-tracker
-npm ci
+npm ci                                               # نیاز به Node.js >= 22 (فیلد engines، CI و Docker)
 cp .env.example .env.local   # شامل VITE_SITE_URL برای بیلد محلی
 npm run dev
 ```
@@ -57,7 +57,8 @@ npm run dev
 npm run lint                                               # بررسی کیفیت کد با oxlint (۰ خطا / ۰ هشدار)
 npm run test:coverage                                      # اجرای تست‌های واحد و طلایی با بررسی آستانه پوشش کد
 VITE_SITE_URL="https://example.com" npm run build          # تایپ‌چک، تولید متادیتای مطلق، sitemap و بیلد
-npm run check:budget                                       # کنترل بودجه حجم Gzip باندل تولیدی
+npm run check:budget                                       # کنترل بودجه حجم Gzip باندل production (JS/CSS + فونت)
+npx playwright install chromium                            # نصب یکبار مرورگر Chromium مورد نیاز تست E2E
 npm run test:e2e                                           # تست E2E آفلاین با Playwright و Service Worker
 ```
 
@@ -77,7 +78,12 @@ npm run test:e2e                                           # تست E2E آفلا
 #### ۲. دامنه اختصاصی پشت Cloudflare و تست اپراتورهای ایران
 برای پایداری کامل دسترسی روی اپراتورهای داخل ایران، اتصال دامنه اختصاصی پشت Cloudflare توصیه می‌شود.
 
-#### ۳. استقرار روی Railway (کانتینر Docker + Caddy غیرریشه)
+#### ۳. استقرار روی Cloudflare Pages (فایل‌های `_headers` / `_redirects`)
+1. در [Cloudflare Dashboard](https://dash.cloudflare.com/) گزینه **Workers & Pages ← Create ← Pages ← Connect to Git** را انتخاب و فورک مخزن را متصل کنید.
+2. تنظیمات بیلد: فرمان `npm run build`، پوشه خروجی `dist` و متغیر محیطی الزامی `VITE_SITE_URL` (آدرس نهایی دامنه).
+3. فایل‌های [`public/_headers`](./public/_headers) و [`public/_redirects`](./public/_redirects) بهطور خودکار توسط Cloudflare Pages اعمال میشوند: هدرهای `CSP` (شامل `upgrade-insecure-requests`)، `HSTS (preload)` و کشینگ PWA از `_headers` و SPA fallback (`/index.html 200`) از `_redirects`. نیازی به کپی تنظیمات `vercel.json` نیست.
+
+#### ۴. استقرار روی Railway (کانتینر Docker + Caddy غیرریشه)
 1. در [railway.com](https://railway.com) گزینه **New Project ← Deploy from GitHub repo** را بزنید.
 2. متغیر الزامی `VITE_SITE_URL` را تنظیم کرده و سلامت کانتینر را از مسیر `/health` بررسی نمایید.
 
@@ -104,7 +110,7 @@ npm run test:e2e                                           # تست E2E آفلا
 ```bash
 git clone https://github.com/soroushse7o/persian-calorie-tracker.git
 cd persian-calorie-tracker
-npm ci
+npm ci                                               # Requires Node.js >= 22 (engines field; CI & Docker use Node 22)
 cp .env.example .env.local   # includes VITE_SITE_URL for local builds
 npm run dev
 ```
@@ -113,7 +119,8 @@ npm run dev
 npm run lint                                               # oxlint (0 errors / 0 warnings)
 npm run test:coverage                                      # unit + golden tests with coverage thresholds
 VITE_SITE_URL="https://example.com" npm run build          # type-check, absolute metadata, sitemap, build
-npm run check:budget                                       # gzipped production bundle budget
+npm run check:budget                                       # gzipped JS/CSS + self-hosted font download budget
+npx playwright install chromium                            # one-time install of the Chromium browser for Playwright E2E
 npm run test:e2e                                           # offline Playwright + Service Worker test
 ```
 
@@ -131,9 +138,24 @@ npm run test:e2e                                           # offline Playwright 
 **2. Custom domain behind Cloudflare (for Iranian operators)**
 For reliable access from inside Iran, put a custom domain behind Cloudflare with a `CNAME` record to Vercel/Railway (orange-cloud proxy on, SSL/TLS set to **Full (strict)**), set `VITE_SITE_URL` exactly to `https://your-domain.com`, and redeploy so `canonical`, `og:image`, and `sitemap.xml` use the final domain. Note that the `HSTS` header contains `preload` — verify every subdomain has valid HTTPS before submitting to `hstspreload.org`.
 
-**3. Railway (Docker container + non-root Caddy)**
+**3. Cloudflare Pages (static hosting; uses `public/_headers` and `public/_redirects`)**
+1. In the [Cloudflare dashboard](https://dash.cloudflare.com/), choose **Workers & Pages → Create → Pages → Connect to Git** and select this fork.
+2. Build command `npm run build`, output directory `dist`, and the required `VITE_SITE_URL` environment variable set to the final public domain.
+3. [`public/_headers`](./public/_headers) and [`public/_redirects`](./public/_redirects) are applied automatically by Cloudflare Pages: `_headers` carries the `CSP` (including `upgrade-insecure-requests`), `HSTS (preload)`, and PWA caching rules, while `_redirects` provides the SPA fallback (`/index.html 200`). No `vercel.json` equivalent is needed. Both files are intentionally kept in the repo for this deployment target.
+
+**4. Railway (Docker container + non-root Caddy)**
 1. In [railway.com](https://railway.com), choose **New Project ← Deploy from GitHub repo**.
 2. Set the required `VITE_SITE_URL` variable and check container health at `/health`.
+
+### Configuration & contributor notes
+
+- **Node.js:** `package.json` declares `"engines": { "node": ">=22" }`, matching CI (`actions/setup-node` with Node 22) and the Docker `node:22-alpine` builder. Use Node 22 or newer locally; see [CONTRIBUTING.md](./CONTRIBUTING.md) for the full setup, test commands and PR checklist.
+- **Android Digital Asset Links (placeholder removed):** `public/.well-known/assetlinks.json` is intentionally an **empty array (`[]`)**. It previously shipped an all-zero SHA-256 fingerprint and `package_name: ir.kalorishomar.twa`, which conflicted with the Capacitor `appId` (`ir.kalorishomar.app`) and would have falsely advertised a TWA association. **No Android app association is active.** To enable one later, publish a real statement with the release signing certificate's fingerprint and a `package_name` matching the signed app. See [SECURITY.md](./SECURITY.md); never add unverified fingerprints.
+- **Lighthouse CI:** `lighthouserc.json` marks all four categories (performance, accessibility, best-practices, SEO) as `error`, matching the strict CI step name. The performance floor is a realistic `0.85` because CI-run Lighthouse scores fluctuate, while the other three stay at `0.9`. The CI workflow is owned by the security agent and needs no rename.
+- **Railway Caddy configuration:** the `CSP` in the `Caddyfile` now includes `upgrade-insecure-requests`, identical to `vercel.json` and `public/_headers`. `auto_https off` is deliberate: Railway terminates TLS at its edge and forwards plaintext HTTP to the container on `$PORT`, which has no public IP and cannot complete an ACME challenge; HSTS plus the CSP directive enforce HTTPS at the edge. `trusted_proxies static 0.0.0.0/0 ::/0` is also deliberate — Railway does not publish static proxy IP ranges, so a narrower allow-list would break forwarded-header handling as its proxy fleet rotates. Self-hosted deployments with known proxy CIDRs should replace it with an explicit list.
+- **Bundle budget:** `npm run check:budget` resolves the entry chunk from `dist/index.html` (instead of guessing an `index-*` filename) and **fails if no entry can be resolved**. It also counts the raw bytes of the self-hosted Vazirmatn woff2 fonts in the total-download budget (JS gzip + CSS gzip + fonts), so renamed chunks or added fonts cannot silently pass.
+
+**یادداشتهای پیکربندی (خلاصه):** فیلد `engines` در `package.json` نیاز به **Node.js >= ۲۲** را مشخص میکند (همانند CI و Docker). فایل `assetlinks.json` عمدتاً **آرایه خالی** است و هیچ ارتباط TWA فعالی وجود ندارد (اثر انگشت all-zero حذف شد). CSP در `Caddyfile` اکنون شامل `upgrade-insecure-requests` است؛ `auto_https off` بهدلیل خاتمه TLS در لبه Railway است و `trusted_proxies` گسترده بهدلیل نبود رنجهای ثابت پروکسی Railway لازم است. بودجه باندل ورودی را از `dist/index.html` پیدا میکند و فونتهای محلی را هم محاسبه مینماید.
 
 ### License & Author
 Licensed under the [MIT License](./LICENSE) — Copyright (c) 2026 [soroushse7o](https://github.com/soroushse7o) ([Repository](https://github.com/soroushse7o/persian-calorie-tracker)).

@@ -1,7 +1,7 @@
 name: بازخورد کاربری، پیشنهاد قابلیت یا گزارش بتا
 description: ارسال نظر، پیشنهاد تجربه کاربری یا گزارش ناشناس بتای کالری‌شمار روزمره
 title: "[بازخورد] "
-labels: ["feedback"]
+labels: ["enhancement", "question"]
 body:
   - type: textarea
     id: details

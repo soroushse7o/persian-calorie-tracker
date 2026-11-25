@@ -1,12 +1,16 @@
 version: 2
 updates:
+  # NOTE: labels are restricted to the canonical repository label set
+  # (accessibility, bug, documentation, enhancement, question). Older configs
+  # referenced labels that this fork does not have. If you create dedicated
+  # maintenance labels in GitHub Settings, update these values accordingly.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
     labels:
-      - "dependencies"
+      - "enhancement"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -14,4 +18,14 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 5
     labels:
-      - "ci"
+      - "enhancement"
+
+  # Covers both base images in ./Dockerfile:
+  #   node:22-alpine (build stage) and caddy:2-alpine (runner stage).
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "enhancement"

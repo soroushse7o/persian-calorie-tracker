@@ -2,12 +2,26 @@
 {
 	admin off
 	persist_config off
+
+	# Railway terminates TLS at its edge and forwards plaintext HTTP to the
+	# container on $PORT. The container has no public IP and cannot bind 80/443,
+	# so Caddy must not run its own ACME / HTTP-03 challenge: auto_https off.
+	# HTTPS is enforced at the Railway edge; HSTS here plus
+	# "upgrade-insecure-requests" in the CSP below (also in vercel.json and
+	# public/_headers) upgrade any stray http:// subrequests.
 	auto_https off
 
 	log {
 		format json
 	}
 
+	# Railway does NOT publish a static, documented set of edge-proxy IPs: its
+	# proxy fleet is dynamic, so a restrictive allow-list would silently break
+	# X-Forwarded-For / X-Forwarded-Proto handling when Railway rotates hosts.
+	# Broad trust is required in this deployment; the only ingress path to the
+	# container is Railway's internal network and TLS is terminated upstream.
+	# If a self-hosted deployment has known proxies (or Railway ever publishes
+	# stable CIDRs), replace these with that explicit range list.
 	servers {
 		trusted_proxies static 0.0.0.0/0 ::/0
 	}
@@ -30,9 +44,11 @@
 		root * /app/dist
 		encode zstd gzip
 
-		# Hardened security headers (100% self-hosted fonts -> strict self-only CSP)
+		# Hardened security headers (100% self-hosted fonts -> strict self-only CSP).
+		# Keep this CSP byte-for-byte aligned with vercel.json and public/_headers;
+		# upgrade-insecure-requests was missing here and is now included.
 		header {
-			Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://world.openfoodfacts.org; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+			Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://world.openfoodfacts.org; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests"
 			Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
 			X-Content-Type-Options "nosniff"
 			X-Frame-Options "DENY"

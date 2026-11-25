@@ -1,7 +1,7 @@
 name: پیشنهاد یا اصلاح اطلاعات غذایی (غذای ناموجود / اشتباه)
 description: درخواست افزودن غذای ایرانی جدید یا اصلاح کالری و واحد خانگی یک غذای موجود
 title: "[بانک غذا] "
-labels: ["food-catalog"]
+labels: ["enhancement"]
 body:
   - type: input
     id: food_name
