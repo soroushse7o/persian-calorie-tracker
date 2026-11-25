@@ -27,6 +27,75 @@ export interface ComputedBetaSummary {
 const MAX_STORED_PHRASES = 30
 const MAX_PHRASE_LEN = 36
 
+/**
+ * Terms that must never survive into a stored/logged free-text phrase.
+ * Health conditions and personal names are redacted as whole tokens so food
+ * words that merely share a prefix (e.g. «رژیمی») are not mangled.
+ */
+const SENSITIVE_TERMS: readonly string[] = [
+  // Health / medical context
+  'دیابت',
+  'قند خون',
+  'فشار خون',
+  'چربی خون',
+  'کلسترول',
+  'سرطان',
+  'بیماری',
+  'کلیه',
+  'کبد',
+  'قلب',
+  'تیروئید',
+  'آلرژی',
+  'حساسیت',
+  'باردار',
+  'شیردهی',
+  'کم خونی',
+  'چاقی',
+  'لاغری',
+  'رژیم',
+  'دارو',
+  'قرص',
+  'انسولین',
+  'مسکن',
+  'دکتر',
+  'پزشک',
+  'diabetes',
+  'cancer',
+  'allergy',
+  'pregnant',
+  'cholesterol',
+  'medication',
+  'insulin',
+  // Common Iranian given/family names (redacted as standalone tokens)
+  'محمد',
+  'علی',
+  'حسن',
+  'حسین',
+  'احمد',
+  'مریم',
+  'فاطمه',
+  'زهرا',
+  'رضا',
+  'کریم',
+  'احمدی',
+  'محمدی',
+  'حسینی',
+  'کریمی',
+  'رضایی',
+  'علیپور',
+]
+
+const REDACTED = '[ردشده]'
+
+function redactSensitiveTerms(text: string): string {
+  let out = text
+  for (const term of SENSITIVE_TERMS) {
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    out = out.replace(new RegExp(`(^|\\s)${escaped}($|\\s)`, 'gi'), `$1${REDACTED}$2`)
+  }
+  return out
+}
+
 function createEmptyMetrics(): LocalBetaMetrics {
   return {
     firstSeenDateKey: null,
@@ -37,13 +106,20 @@ function createEmptyMetrics(): LocalBetaMetrics {
   }
 }
 
-/** Scrubs long numbers/emails/URLs and truncates phrase length so personal info is never stored. */
+/** Scrubs URLs/emails/phone numbers/names/health terms and truncates phrase length. */
 export function sanitizeUnmatchedPhraseForLocalLog(raw: string): string | null {
-  const cleaned = raw
-    .replace(/https?:\/\/\S+/gi, '')
+  let cleaned = raw
+    .replace(/https?:\/\/\S+|www\.\S+/gi, '')
     .replace(/\S+@\S+\.\S+/g, '')
+    .replace(/@[\p{L}\p{N}_]{2,}/gu, '')
+    .replace(/(آقای|خانم|دکتر|جناب|پروفسور|استاد)\s+\S+/g, REDACTED)
+    .replace(/(?:اسم|نام)\s+من\s+\S+/g, REDACTED)
+    .replace(/\S+@\S+/g, '')
     .replace(/[0-9۰-۹٠-٩]{4,}/g, '')
+  cleaned = redactSensitiveTerms(cleaned)
+  cleaned = cleaned
     .replace(/\s+/g, ' ')
+    .replace(/(\[ردشده\]\s*){2,}/g, REDACTED)
     .trim()
     .slice(0, MAX_PHRASE_LEN)
   return cleaned.length >= 2 ? cleaned : null
@@ -226,7 +302,13 @@ export function computeBetaSummary(
   }
 }
 
-export function buildAnonymousBetaMarkdownReport(summary: ComputedBetaSummary): string {
+/**
+ * Builds the exact, redacted local beta report. It deliberately contains no raw
+ * free text: unmatched phrases were sanitized on write and re-sanitized on read.
+ * The full generated text is shown to the user for review before any issue link
+ * is opened (see `buildAnonymousBetaIssueUrl` in config/feedback.ts).
+ */
+export function buildRedactedBetaMarkdownReport(summary: ComputedBetaSummary): string {
   const unmatchedLines =
     summary.topUnmatched.length > 0
       ? summary.topUnmatched
@@ -235,15 +317,27 @@ export function buildAnonymousBetaMarkdownReport(summary: ComputedBetaSummary): 
       : '- موردی ثبت نشده است'
 
   return [
-    `### گزارش ناشناس کیفیت پارسر و تجربه کاربری (۱۰۰٪ تولیدشده روی دستگاه کاربر)`,
+    `### گزارش محلی پالایش‌شده کیفیت پارسر و تجربه کاربری`,
+    `تنها برچسبهای پالایششده (بدون متن آزاد خام) — هیچ ارسال خودکاری صورت نمیگیرد.`,
+    `همان متنی که در ادامه میبینید، پیش از باز کردن لینک گیتهاب دقیقاً برای تأیید به شما نمایش داده میشود.`,
+    ``,
     `- نسخه کاتالوگ: \`${CATALOG_VERSION}\``,
     `- تعداد دفعات ثبت وعده: ${formatFaNumber(summary.totalSubmissions)}`,
-    `- کل اقلام تشخیص‌داده‌شده: ${formatFaNumber(summary.totalParsedItems)}`,
-    `- نرخ «غذای ناموجود / تشخیص‌داده‌نشده»: ${formatFaNumber(summary.unmatchedRatePct, 1)}٪ (${formatFaNumber(summary.totalUnmatchedCount)} عبارت)`,
+    `- کل اقلام تشخیص\u200cdاده\u200cشده: ${formatFaNumber(summary.totalParsedItems)}`,
+    `- نرخ «غذای ناموجود / تشخیص\u200cdاده\u200cنشده»: ${formatFaNumber(summary.unmatchedRatePct, 1)}٪ (${formatFaNumber(summary.totalUnmatchedCount)} عبارت)`,
     `- روزهای فعال ثبت: ${formatFaNumber(summary.activeDaysCount)} از ${formatFaNumber(summary.spanDays)} روز (${formatFaNumber(summary.retentionRatioPct)}٪ بازگشت)`,
-    `- میانگین آیتم ثبت‌شده در هر روز فعال: ${formatFaNumber(summary.avgLogsPerActiveDay, 1)}`,
+    `- میانگین آیتم ثبت\u200cشده در هر روز فعال: ${formatFaNumber(summary.avgLogsPerActiveDay, 1)}`,
     ``,
-    `### عبارات تشخیص‌داده‌نشده پرتکرار (برای بهبود بانک غذا و پارسر)`,
+    `### برچسبهای پالایششده غذاهای تشخیص\u200cdاده\u200cنشده (اطلاعات شخصی و متن آزاد ردشده)`,
     unmatchedLines,
   ].join('\n')
+}
+
+/**
+ * @deprecated Kept only for the settings component (owned by another agent).
+ * The generated report is redacted and user-reviewed; it is not "anonymous"
+ * free text, so prefer `buildRedactedBetaMarkdownReport` in new code.
+ */
+export function buildAnonymousBetaMarkdownReport(summary: ComputedBetaSummary): string {
+  return buildRedactedBetaMarkdownReport(summary)
 }

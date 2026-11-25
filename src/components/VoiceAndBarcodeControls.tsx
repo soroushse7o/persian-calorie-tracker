@@ -1,4 +1,4 @@
-import { Camera, Check, Globe, Loader2, Mic, MicOff, Plus, ScanBarcode, X } from 'lucide-react'
+import { Camera, Check, Globe, Loader2, Mic, MicOff, Plus, ScanBarcode, ShieldAlert, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { resolveFoodMicronutrients } from '../data/foods/micronutrientRegistry'
@@ -36,6 +36,139 @@ interface BarcodeDetectorInstance {
   detect: (source: HTMLVideoElement) => Promise<BarcodeDetection[]>
 }
 type BarcodeDetectorCtor = new (opts?: { formats?: string[] }) => BarcodeDetectorInstance
+
+/** Local, persisted opt-in for the cloud-backed Web Speech API. */
+export const VOICE_CLOUD_CONSENT_KEY = 'kalorishomar_v3_voice_cloud_consent'
+export const OFF_COMMUNITY_SOURCE_LABEL =
+  'OpenFoodFacts — داده جامعه کاربران، تأییدنشده و غیررسمی'
+
+type VoiceConsentStorage = Pick<Storage, 'getItem'> &
+  Partial<Pick<Storage, 'setItem' | 'removeItem'>>
+
+function defaultVoiceConsentStorage(): VoiceConsentStorage | null {
+  return typeof window !== 'undefined' ? window.localStorage : null
+}
+
+// oxlint-disable-next-line react/only-export-components -- testable helper, not a component
+export function readVoiceCloudConsent(storage: VoiceConsentStorage | null = defaultVoiceConsentStorage()): boolean {
+  try {
+    return storage?.getItem(VOICE_CLOUD_CONSENT_KEY) === 'accepted'
+  } catch {
+    return false
+  }
+}
+
+// oxlint-disable-next-line react/only-export-components -- testable helper, not a component
+export function persistVoiceCloudConsent(
+  accepted: boolean,
+  storage: VoiceConsentStorage | null = defaultVoiceConsentStorage(),
+): void {
+  try {
+    if (accepted) storage?.setItem?.(VOICE_CLOUD_CONSENT_KEY, 'accepted')
+    else storage?.removeItem?.(VOICE_CLOUD_CONSENT_KEY)
+  } catch {
+    // Non-critical local preference; never interrupt the user flow.
+  }
+}
+
+const MAX_OFF_NAME_LEN = 80
+const MAX_OFF_KCAL_100G = 1000
+const MAX_OFF_MACRO_G = 100
+const MAX_OFF_SODIUM_G = 5
+
+/** Number.isFinite + plausible-range validation for third-party numeric data. */
+function finiteInRange(value: unknown, min: number, max: number): number | null {
+  const n =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string' && value.trim() !== ''
+        ? Number(value)
+        : Number.NaN
+  return Number.isFinite(n) && n >= min && n <= max ? n : null
+}
+
+function macroOrZero(value: unknown): number | null {
+  if (value === undefined || value === null) return 0
+  return finiteInRange(value, 0, MAX_OFF_MACRO_G)
+}
+
+export type OpenFoodFactsParseResult =
+  | { ok: true; candidate: OnlineBarcodeCandidate }
+  | { ok: false; error: string }
+
+/**
+ * OpenFoodFacts is user-contributed and untrusted. Validate every field before
+ * it reaches local storage or the nutrition calculator, and cap product names.
+ */
+// oxlint-disable-next-line react/only-export-components -- testable helper, not a component
+export function parseOpenFoodFactsProduct(raw: unknown, barcode: string): OpenFoodFactsParseResult {
+  const invalid = {
+    ok: false as const,
+    error: 'اطلاعات تغذیهای کاملی برای این بارکد در OpenFoodFacts ثبت نشده است.',
+  }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return invalid
+  const data = raw as { status?: unknown; product?: unknown }
+  if (data.status !== 1 || !data.product || typeof data.product !== 'object') return invalid
+
+  const product = data.product as Record<string, unknown>
+  const n = product.nutriments
+  if (!n || typeof n !== 'object' || Array.isArray(n)) return invalid
+  const nutriments = n as Record<string, unknown>
+
+  const rawName = product.product_name_fa || product.product_name
+  if (typeof rawName !== 'string') return invalid
+  const name = Array.from(rawName)
+    .filter((ch) => {
+      const code = ch.codePointAt(0) ?? 0
+      return code >= 32 && code !== 127 && ch !== '<' && ch !== '>'
+    })
+    .join('')
+    .trim()
+    .slice(0, MAX_OFF_NAME_LEN)
+  if (name.length < 2) return invalid
+  if (!/^\d{8,14}$/.test(barcode)) return invalid
+
+  const kcal100 = finiteInRange(nutriments['energy-kcal_100g'], 1, MAX_OFF_KCAL_100G)
+  if (kcal100 === null) return invalid
+
+  const protein100 = macroOrZero(nutriments.proteins_100g)
+  const carbs100 = macroOrZero(nutriments.carbohydrates_100g)
+  const fat100 = macroOrZero(nutriments.fat_100g)
+  const fiber100 = macroOrZero(nutriments.fiber_100g)
+  if (
+    protein100 === null ||
+    carbs100 === null ||
+    fat100 === null ||
+    fiber100 === null
+  ) {
+    return invalid
+  }
+  const sodiumRaw = nutriments.sodium_100g
+  const sodiumG =
+    sodiumRaw === undefined || sodiumRaw === null
+      ? null
+      : finiteInRange(sodiumRaw, 0, MAX_OFF_SODIUM_G)
+  if (sodiumRaw !== undefined && sodiumRaw !== null && sodiumG === null) return invalid
+  const servingRaw = product.serving_quantity
+  const servingGrams =
+    servingRaw === undefined || servingRaw === null ? 100 : finiteInRange(servingRaw, 5, 1000)
+  if (servingGrams === null) return invalid
+
+  return {
+    ok: true,
+    candidate: {
+      barcode,
+      name,
+      kcal100: Math.round(kcal100),
+      protein100: Math.round(protein100 * 10) / 10,
+      carbs100: Math.round(carbs100 * 10) / 10,
+      fat100: Math.round(fat100 * 10) / 10,
+      fiber100: Math.round(fiber100 * 10) / 10,
+      ...(sodiumG !== null ? { sodiumMg100: Math.round(sodiumG * 1000) } : {}),
+      servingGrams: Math.round(servingGrams),
+    },
+  }
+}
 
 function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
   if (typeof window === 'undefined') return null
@@ -82,6 +215,8 @@ export function VoiceAndBarcodeControls({
   onSaveFetchedBarcodeFood,
 }: VoiceAndBarcodeControlsProps) {
   const [speechSupported] = useState(() => Boolean(getSpeechRecognitionCtor()))
+  const [voiceConsent, setVoiceConsent] = useState(() => readVoiceCloudConsent())
+  const [voiceConsentOpen, setVoiceConsentOpen] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [barcodeModalOpen, setBarcodeModalOpen] = useState(false)
   const [barcodeInput, setBarcodeInput] = useState('')
@@ -92,6 +227,7 @@ export function VoiceAndBarcodeControls({
   const [onlineError, setOnlineError] = useState<string | null>(null)
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
+  const consentModalRef = useRef<HTMLDivElement | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const scanTimerRef = useRef<number | null>(null)
@@ -120,6 +256,8 @@ export function VoiceAndBarcodeControls({
   }, [stopCamera])
 
   useFocusTrap(modalRef, barcodeModalOpen, closeBarcodeModal)
+  const closeConsentDialog = useCallback(() => setVoiceConsentOpen(false), [])
+  useFocusTrap(consentModalRef, voiceConsentOpen, closeConsentDialog)
 
   useEffect(() => {
     return () => {
@@ -128,16 +266,9 @@ export function VoiceAndBarcodeControls({
     }
   }, [stopCamera])
 
-  const handleToggleVoice = () => {
+  const startVoiceRecognition = () => {
     const Ctor = getSpeechRecognitionCtor()
     if (!Ctor) return
-
-    if (isListening) {
-      recognitionRef.current?.stop()
-      setIsListening(false)
-      return
-    }
-
     try {
       const rec = new Ctor()
       rec.lang = 'fa-IR'
@@ -158,6 +289,35 @@ export function VoiceAndBarcodeControls({
     } catch {
       setIsListening(false)
     }
+  }
+
+  const handleToggleVoice = () => {
+    if (isListening) {
+      recognitionRef.current?.stop()
+      setIsListening(false)
+      return
+    }
+    // First use: show the cloud-audio disclosure and require explicit opt-in.
+    // Recognition is never started implicitly, including on component mount.
+    if (!voiceConsent) {
+      setVoiceConsentOpen(true)
+      return
+    }
+    startVoiceRecognition()
+  }
+
+  const acceptVoiceCloudConsent = () => {
+    persistVoiceCloudConsent(true)
+    setVoiceConsent(true)
+    setVoiceConsentOpen(false)
+  }
+
+  const revokeVoiceCloudConsent = () => {
+    recognitionRef.current?.stop()
+    setIsListening(false)
+    persistVoiceCloudConsent(false)
+    setVoiceConsent(false)
+    setVoiceConsentOpen(false)
   }
 
   const startCameraScan = async () => {
@@ -220,46 +380,13 @@ export function VoiceAndBarcodeControls({
         setOnlineError('این بارکد در پایگاه جهانی OpenFoodFacts یافت نشد؛ می‌توانید دستی تعریف کنید.')
         return
       }
-      const data = (await res.json()) as {
-        status?: number
-        product?: {
-          product_name?: string
-          product_name_fa?: string
-          serving_quantity?: number | string
-          nutriments?: Record<string, number | undefined>
-        }
-      }
-      const p = data.product
-      const n = p?.nutriments
-      const name = (p?.product_name_fa || p?.product_name || '').trim()
-      const kcal100 = Math.round(Number(n?.['energy-kcal_100g'] ?? 0))
-      if (data.status !== 1 || !name || kcal100 <= 0) {
-        setOnlineError('اطلاعات تغذیه‌ای کاملی برای این بارکد در OpenFoodFacts ثبت نشده است.')
+      const data: unknown = await res.json()
+      const parsed = parseOpenFoodFactsProduct(data, cleanDigits)
+      if (!parsed.ok) {
+        setOnlineError(parsed.error)
         return
       }
-      const protein100 = Math.round(Number(n?.proteins_100g ?? 0) * 10) / 10
-      const carbs100 = Math.round(Number(n?.carbohydrates_100g ?? 0) * 10) / 10
-      const fat100 = Math.round(Number(n?.fat_100g ?? 0) * 10) / 10
-      const fiber100 = Math.round(Number(n?.fiber_100g ?? 0) * 10) / 10
-      const rawSodiumG = Number(n?.sodium_100g ?? -1)
-      const sodiumMg100 = rawSodiumG >= 0 ? Math.round(rawSodiumG * 1000) : undefined
-      const servingNum = Number(p?.serving_quantity ?? 100)
-      const servingGrams =
-        Number.isFinite(servingNum) && servingNum >= 5 && servingNum <= 1000
-          ? Math.round(servingNum)
-          : 100
-
-      setOnlineResult({
-        barcode: cleanDigits,
-        name,
-        kcal100,
-        protein100,
-        carbs100,
-        fat100,
-        fiber100,
-        sodiumMg100,
-        servingGrams,
-      })
+      setOnlineResult(parsed.candidate)
     } catch {
       setOnlineError('ارتباط با OpenFoodFacts برقرار نشد (اینترنت را بررسی کنید یا دستی وارد نمایید).')
     } finally {
@@ -304,6 +431,8 @@ export function VoiceAndBarcodeControls({
           { name: 'بسته', grams: onlineResult.servingGrams },
           { name: 'گرم', grams: 1 },
         ],
+        source: OFF_COMMUNITY_SOURCE_LABEL,
+        verified: false,
         isCustom: true,
       })
       onAppendPhrase(`یک ${created.defaultUnit} ${created.name}`)
@@ -319,7 +448,13 @@ export function VoiceAndBarcodeControls({
           id="voice-input-btn"
           onClick={handleToggleVoice}
           aria-label={isListening ? 'توقف ضبط صوتی' : 'ثبت صوتی فارسی'}
-          title={isListening ? 'در حال شنیدن... برای توقف بزنید' : 'ثبت صوتی وعده به فارسی'}
+          title={
+            isListening
+              ? 'در حال شنیدن... برای توقف بزنید'
+              : voiceConsent
+                ? 'ثبت صوتی وعده به فارسی (ارسال صدا به سرویس ابری مرورگر)'
+                : 'ثبت صوتی — ابتدا مجوز ارسال صدا به سرویس ابری مرورگر را تأیید کنید'
+          }
           className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs font-medium transition-colors ${
             isListening
               ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 animate-pulse'
@@ -332,6 +467,23 @@ export function VoiceAndBarcodeControls({
             <Mic className="w-3.5 h-3.5 text-emerald-400" />
           )}
           <span className="hidden sm:inline">{isListening ? 'در حال شنیدن...' : 'صوتی'}</span>
+        </button>
+      )}
+
+      {speechSupported && (
+        <button
+          type="button"
+          id="voice-privacy-settings-btn"
+          onClick={() => setVoiceConsentOpen(true)}
+          aria-label="تنظیمات حریم خصوصی صوتی"
+          title={
+            voiceConsent
+              ? 'مجوز ارسال صدا به سرویس ابری مرورگر فعال است — کلیک برای مشاهده یا لغو'
+              : 'اطلاعات حریم خصوصی ثبت صوتی'
+          }
+          className="inline-flex items-center justify-center rounded-xl border border-[#2C2C33] bg-[#1E1E22] hover:bg-[#282830] px-1.5 py-1.5 text-zinc-400 hover:text-zinc-100"
+        >
+          <ShieldAlert className="w-3.5 h-3.5" />
         </button>
       )}
 
@@ -351,6 +503,94 @@ export function VoiceAndBarcodeControls({
         <ScanBarcode className="w-3.5 h-3.5 text-amber-400" />
         <span className="hidden sm:inline">بارکد</span>
       </button>
+
+      {voiceConsentOpen &&
+        createPortal(
+          <div
+            dir="rtl"
+            role="dialog"
+            aria-modal="true"
+            aria-label="حریم خصوصی ثبت صوتی"
+            data-testid="voice-cloud-consent-dialog"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) closeConsentDialog()
+            }}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
+          >
+            <div
+              ref={consentModalRef}
+              className="w-full max-w-md rounded-2xl bg-[#161618] border border-[#2C2C33] p-5 shadow-2xl space-y-4 animate-fade-up"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-sm font-bold text-zinc-100">
+                    هشدار حریم خصوصی: ثبت صوتی به ابر مرورگر نیاز دارد
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeConsentDialog}
+                  aria-label="بستن پنجره حریم خصوصی صوتی"
+                  className="w-8 h-8 rounded-lg bg-[#222228] text-zinc-400 hover:text-zinc-100 flex items-center justify-center"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {voiceConsent ? (
+                <div className="space-y-3 text-xs text-zinc-300 leading-relaxed">
+                  <p>
+                    در حال حاضر مجوز ارسال صدا به سرویس ابری ارائهدهنده مرورگر فعال است. بقیه
+                    بخشهای برنامه بدون ارسال داده کار میکنند.
+                  </p>
+                  <button
+                    type="button"
+                    data-testid="voice-cloud-consent-revoke"
+                    onClick={revokeVoiceCloudConsent}
+                    className="rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 px-3 py-1.5 text-xs font-semibold"
+                  >
+                    لغو مجوز صوتی و توقف شنیدن
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3 text-xs text-zinc-300 leading-relaxed">
+                  <p>
+                    <strong className="text-zinc-100">توجه:</strong> ادعای «۱۰۰٪ آفلاین» درباره
+                    ذخیره و پردازش وعدههای غذایی شماست. رابط Web Speech مرورگر استثنا است: وقتی
+                    دکمه صوتی را فشار میدهید، مرورگر صدای شما را برای تبدیل به متن به سرویس ابری
+                    ارائهدهنده خود (مثلاً Google یا Apple) ارسال میکند. این کار خارج از کنترل این
+                    برنامه است و ممکن است صدا توسط آن سرویس پردازش شود.
+                  </p>
+                  <p>
+                    برنامه نه صدای شما را ذخیره میکند و نه مستقیم چیزی ارسال مینماید؛ متن حاصل تنها
+                    روی همین دستگاه به وعده غذایی اضافه میشود. اگر موافق نیستید، انصراف بزنید؛ بقیه
+                    قابلیتها کاملاً آفلاین باقی میمانند.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      data-testid="voice-cloud-consent-accept"
+                      onClick={acceptVoiceCloudConsent}
+                      className="rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 px-3 py-1.5 text-xs font-semibold"
+                    >
+                      تأیید و فعالسازی ثبت صوتی
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="voice-cloud-consent-decline"
+                      onClick={closeConsentDialog}
+                      className="rounded-xl bg-[#1E1E22] hover:bg-[#282830] border border-[#2E2E36] px-3 py-1.5 text-xs font-semibold text-zinc-300"
+                    >
+                      انصراف (بدون ارسال صدا)
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
 
       {barcodeModalOpen &&
         createPortal(
@@ -466,6 +706,13 @@ export function VoiceAndBarcodeControls({
                           </div>
                         </div>
                       </div>
+                      <p
+                        data-testid="off-unverified-community-warning"
+                        className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1.5 leading-relaxed"
+                      >
+                        داده جامعه کاربران OpenFoodFacts (تأییدنشده و غیررسمی) — مقادیر تقریبیاند،
+                        قبل از ذخیره بررسی کنید.
+                      </p>
                       <button
                         type="button"
                         onClick={handleSaveAndUseOnlineFood}
