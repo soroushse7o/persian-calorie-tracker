@@ -46,7 +46,7 @@
 ### اجرای محلی و تست‌ها
 
 ```bash
-git clone https://github.com/soroushse7o/persian-calorie-tracker-improved.git
+git clone https://github.com/soroushse7o/persian-calorie-tracker.git
 cd persian-calorie-tracker
 npm ci
 cp .env.example .env.local   # شامل VITE_SITE_URL برای بیلد محلی
@@ -102,7 +102,7 @@ npm run test:e2e                                           # تست E2E آفلا
 ### Local Development & Tests
 
 ```bash
-git clone https://github.com/soroushse7o/persian-calorie-tracker-improved.git
+git clone https://github.com/soroushse7o/persian-calorie-tracker.git
 cd persian-calorie-tracker
 npm ci
 cp .env.example .env.local   # includes VITE_SITE_URL for local builds
@@ -136,20 +136,20 @@ For reliable access from inside Iran, put a custom domain behind Cloudflare with
 2. Set the required `VITE_SITE_URL` variable and check container health at `/health`.
 
 ### License & Author
-Licensed under the [MIT License](./LICENSE) — Copyright (c) 2026 [soroushse7o](https://github.com/soroushse7o) ([Repository](https://github.com/soroushse7o/persian-calorie-tracker-improved)).
+Licensed under the [MIT License](./LICENSE) — Copyright (c) 2026 [soroushse7o](https://github.com/soroushse7o) ([Repository](https://github.com/soroushse7o/persian-calorie-tracker)).
 
 
 ---
 
-## Upgrade Notes — Independent Fork / یادداشت ارتقا
+## Upgrade Notes / یادداشت ارتقا
 
-This repository is a separate, independent fork of `soroushse7o/persian-calorie-tracker`. Four audited defects were fixed, each with regression tests:
+Four audited defects were fixed, each with regression tests:
 
 1. **Small portions keep their weight** (`src/store/entryMath.ts`): switching a sub-10 g household portion to grams no longer inflates it to 10 g. A 4 g / 25 kcal walnut now stays 4 g / 25 kcal.
 2. **TDEE input validation** (`src/utils/calorieCalculator.ts`): non-finite height/weight and invalid sex/activity/goal return `ok:false` with a Persian message instead of producing `NaN` goals.
 3. **Light theme coverage** (`src/index.css` + `src/styles/lightThemeCoverage.test.ts`): every hardcoded dark utility surface now has a light override, and a test prevents future gaps.
 4. **First hydration reminder** (`src/utils/localReminders.ts` + `src/utils/localReminders.test.ts`): a newly enabled user now gets a first water reminder instead of waiting forever.
 
-Verification on this fork: `npm test` (279 tests), `npm run lint`, `npm run build`, `npm run check:budget` — all passing.
+Verification: `npm test` (279 tests), `npm run lint`, `npm run build`, `npm run check:budget` — all passing.
 
-این مخزن یک فورک مستقل از پروژهٔ اصلی است. چهار باگ تأییدشده همراه با تست رگرسیون برطرف شدند: حفظ وزن وعدههای کمتر از ۱۰ گرم هنگام تبدیل واحد، رد ورودیهای نامعتبر محاسبهگر TDEE بهجای خروجی `NaN`، پوشش کامل رنگهای تم روشن، و اجرای اولین یادآور نوشیدن آب.
+چهار باگ تأییدشده همراه با تست رگرسیون برطرف شدند: حفظ وزن وعدههای کمتر از ۱۰ گرم هنگام تبدیل واحد، رد ورودیهای نامعتبر محاسبهگر TDEE بهجای خروجی `NaN`، پوشش کامل رنگهای تم روشن، و اجرای اولین یادآور نوشیدن آب.
