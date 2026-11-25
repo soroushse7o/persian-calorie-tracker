@@ -24,12 +24,31 @@ async function trimCache(cacheName, maxEntries) {
   await Promise.all(keys.slice(0, excess).map((req) => cache.delete(req)))
 }
 
+/** Explicit, cacheable-free response for genuinely offline requests. */
+function offlineResponse(message = 'آفلاین — اتصال اینترنت برقرار نیست.') {
+  return new Response(message, {
+    status: 503,
+    statusText: 'Offline',
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+  })
+}
+
 self.addEventListener('install', (event) => {
   // Intentionally do NOT call self.skipWaiting() here so an update never reloads
   // the page while the user is mid-entry. Activation happens only when the user
   // clicks "به‌روزرسانی" (which posts SKIP_WAITING) or opens a fresh session.
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => cache.addAll(APP_SHELL_ASSETS)),
+    caches.open(STATIC_CACHE).then(async (cache) => {
+      // Cache each asset independently: one 404/network hiccup must not abort the
+      // whole precache (cache.addAll is all-or-nothing).
+      const results = await Promise.allSettled(
+        APP_SHELL_ASSETS.map((asset) => cache.add(asset)),
+      )
+      const failed = results.filter((result) => result.status === 'rejected')
+      if (failed.length > 0) {
+        console.warn(`[sw] ${failed.length} precache asset(s) failed and were skipped`)
+      }
+    }),
   )
 })
 
@@ -77,7 +96,7 @@ self.addEventListener('fetch', (event) => {
         .catch(() =>
           caches
             .match('/index.html', { ignoreVary: true })
-            .then((cached) => cached || Response.error()),
+            .then((cached) => cached || offlineResponse('آفلاین — نسخه ذخیره‌شده ای یافت نشد.')),
         ),
     )
     return
@@ -107,7 +126,7 @@ self.addEventListener('fetch', (event) => {
             }
             return response
           })
-          .catch(() => cached || Response.error())
+          .catch(() => offlineResponse('آفلاین — این فایل در حافظه موجود نیست.'))
       }),
     )
   }

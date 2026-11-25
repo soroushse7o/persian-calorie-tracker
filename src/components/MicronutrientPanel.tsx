@@ -122,6 +122,7 @@ export function MicronutrientPanel({
                 key={tab.id}
                 type="button"
                 data-testid={`micro-filter-${tab.id}`}
+                aria-pressed={groupFilter === tab.id}
                 onClick={() => setGroupFilter(tab.id)}
                 className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
                   groupFilter === tab.id
@@ -178,6 +179,8 @@ export function MicronutrientPanel({
             >
               <button
                 type="button"
+                aria-expanded={isOpen}
+                aria-controls={`micro-detail-${item.spec.key}`}
                 onClick={() =>
                   setExpandedKey((prev) => (prev === item.spec.key ? null : item.spec.key))
                 }
@@ -208,7 +211,14 @@ export function MicronutrientPanel({
                   </div>
                 </div>
 
-                <div className="h-1.5 rounded-full bg-[#24242C] overflow-hidden">
+                <div
+                  className="h-1.5 rounded-full bg-[#24242C] overflow-hidden"
+                  role="meter"
+                  aria-label={`پوشش ${item.spec.label}`}
+                  aria-valuemin={0}
+                  aria-valuemax={item.effectiveDailyRef || 1}
+                  aria-valuenow={item.amount}
+                >
                   <div
                     className={`h-full rounded-full ${barColor} transition-all duration-500`}
                     style={{ width: `${item.clampedPct}%` }}
@@ -218,6 +228,7 @@ export function MicronutrientPanel({
 
               {isOpen && (
                 <div
+                  id={`micro-detail-${item.spec.key}`}
                   data-testid={`micro-detail-${item.spec.key}`}
                   className="mt-2.5 pt-2 border-t border-[#25252E] space-y-2 text-[11px] leading-relaxed"
                 >

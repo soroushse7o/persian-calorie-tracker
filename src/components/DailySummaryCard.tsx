@@ -44,6 +44,23 @@ export function DailySummaryCard({
   const [viewMode, setViewMode] = useState<SummaryViewMode>('overview')
   const [copied, setCopied] = useState(false)
   const copyTimerRef = useRef<number | null>(null)
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const viewModes: SummaryViewMode[] = ['overview', 'macro_chart', 'micronutrients']
+
+  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const last = viewModes.length - 1
+    let next = index
+    // RTL segmented control: ArrowLeft visually advances, ArrowRight goes back.
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next = index + 1
+    else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') next = index - 1
+    else if (e.key === 'Home') next = 0
+    else if (e.key === 'End') next = last
+    else return
+    e.preventDefault()
+    const target = Math.min(last, Math.max(0, next))
+    setViewMode(viewModes[target])
+    tabRefs.current[target]?.focus()
+  }
 
   useEffect(() => {
     return () => {
@@ -185,7 +202,11 @@ export function DailySummaryCard({
           type="button"
           role="tab"
           aria-selected={viewMode === 'overview'}
+          aria-controls={`${idPrefix}-panel-overview`}
+          tabIndex={viewMode === 'overview' ? 0 : -1}
+          ref={(el) => { tabRefs.current[0] = el }}
           id={`${idPrefix}-tab-overview`}
+          onKeyDown={(e) => handleTabKeyDown(e, 0)}
           onClick={() => setViewMode('overview')}
           className={`py-1.5 rounded-lg font-medium transition-colors ${
             viewMode === 'overview'
@@ -199,8 +220,12 @@ export function DailySummaryCard({
           type="button"
           role="tab"
           aria-selected={viewMode === 'macro_chart'}
+          aria-controls={`${idPrefix}-panel-macro-chart`}
+          tabIndex={viewMode === 'macro_chart' ? 0 : -1}
+          ref={(el) => { tabRefs.current[1] = el }}
           id={`${idPrefix}-tab-macro-chart`}
           data-testid="summary-tab-macro-chart"
+          onKeyDown={(e) => handleTabKeyDown(e, 1)}
           onClick={() => setViewMode('macro_chart')}
           className={`py-1.5 rounded-lg font-medium transition-colors ${
             viewMode === 'macro_chart'
@@ -214,8 +239,12 @@ export function DailySummaryCard({
           type="button"
           role="tab"
           aria-selected={viewMode === 'micronutrients'}
+          aria-controls={`${idPrefix}-panel-micronutrients`}
+          tabIndex={viewMode === 'micronutrients' ? 0 : -1}
+          ref={(el) => { tabRefs.current[2] = el }}
           id={`${idPrefix}-tab-micronutrients`}
           data-testid="summary-tab-micronutrients"
+          onKeyDown={(e) => handleTabKeyDown(e, 2)}
           onClick={() => setViewMode('micronutrients')}
           className={`py-1.5 rounded-lg font-medium transition-colors ${
             viewMode === 'micronutrients'
@@ -228,8 +257,15 @@ export function DailySummaryCard({
       </div>
 
       {/* Mode 1: Compact Side-by-Side Calorie Ring + 4 Macro/Fiber Bars (saves ~120px vertical space on mobile) */}
-      {viewMode === 'overview' && (
-        <div className="flex flex-row lg:flex-col items-center gap-4">
+      <div
+        role="tabpanel"
+        id={`${idPrefix}-panel-overview`}
+        aria-labelledby={`${idPrefix}-tab-overview`}
+        tabIndex={0}
+        hidden={viewMode !== 'overview'}
+        style={{ display: viewMode === 'overview' ? undefined : 'none' }}
+      >
+      <div className="flex flex-row lg:flex-col items-center gap-4">
           <div className="relative flex items-center justify-center shrink-0">
             <svg
               width={size}
@@ -313,7 +349,14 @@ export function DailySummaryCard({
                       <span>{formatFaNumber(m.target)}گ</span>
                     </div>
                   </div>
-                  <div className="h-1.5 sm:h-2 rounded-full bg-[#242429] overflow-hidden">
+                  <div
+                    className="h-1.5 sm:h-2 rounded-full bg-[#242429] overflow-hidden"
+                    role="meter"
+                    aria-label={`پیشرفت ${m.label}`}
+                    aria-valuemin={0}
+                    aria-valuemax={m.target}
+                    aria-valuenow={m.consumed}
+                  >
                     <div
                       className={`h-full rounded-full ${m.barColor} transition-all duration-500 ease-out`}
                       style={{ width: `${pct}%` }}
@@ -324,11 +367,18 @@ export function DailySummaryCard({
             })}
           </div>
         </div>
-      )}
+      </div>
 
       {/* Mode 2: Interactive Macronutrient Energy Donut Chart */}
-      {viewMode === 'macro_chart' && (
-        <div className="space-y-2.5 animate-fade-up">
+      <div
+        role="tabpanel"
+        id={`${idPrefix}-panel-macro-chart`}
+        aria-labelledby={`${idPrefix}-tab-macro-chart`}
+        tabIndex={0}
+        hidden={viewMode !== 'macro_chart'}
+        style={{ display: viewMode === 'macro_chart' ? undefined : 'none' }}
+      >
+      <div className="space-y-2.5 animate-fade-up">
           <p className="text-[11px] text-zinc-400 leading-relaxed">
             سهم واقعی هر درشت‌مغذی از انرژی دریافتی (پروتئین و کربوهیدرات ۴ کالری/گرم، چربی ۹
             کالری/گرم) در مقایسه با هدف شما:
@@ -343,11 +393,18 @@ export function DailySummaryCard({
             compact
           />
         </div>
-      )}
+      </div>
 
       {/* Mode 3: Interactive Daily Micronutrient Inspector (Radar + 10 Vitamins & Minerals) */}
-      {viewMode === 'micronutrients' && (
-        <div className="animate-fade-up">
+      <div
+        role="tabpanel"
+        id={`${idPrefix}-panel-micronutrients`}
+        aria-labelledby={`${idPrefix}-tab-micronutrients`}
+        tabIndex={0}
+        hidden={viewMode !== 'micronutrients'}
+        style={{ display: viewMode === 'micronutrients' ? undefined : 'none' }}
+      >
+      <div className="animate-fade-up">
           <MicronutrientPanel
             entries={dayEntries}
             foods={foods}
@@ -358,7 +415,7 @@ export function DailySummaryCard({
             onExploreRichFoods={onExploreRichFoods}
           />
         </div>
-      )}
+      </div>
 
       {/* Compact Daily Water Intake Tracker */}
       <div className="mt-4 pt-4 border-t border-[#222227]" data-testid="water-tracker">
@@ -396,7 +453,14 @@ export function DailySummaryCard({
             </button>
           </div>
         </div>
-        <div className="h-1.5 rounded-full bg-[#242429] overflow-hidden">
+        <div
+          className="h-1.5 rounded-full bg-[#242429] overflow-hidden"
+          role="meter"
+          aria-label="پیشرفت آب روزانه"
+          aria-valuemin={0}
+          aria-valuemax={waterTarget}
+          aria-valuenow={waterGlasses}
+        >
           <div
             className="h-full rounded-full bg-cyan-400 transition-all duration-300 ease-out"
             style={{ width: `${waterPct}%` }}

@@ -1,5 +1,5 @@
 import { ChevronDown, Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { resolveFoodMicronutrients } from '../../data/foods/micronutrientRegistry'
 import {
   FOOD_CATEGORY_LABELS,
@@ -36,6 +36,15 @@ export function SingleFoodForm({
   onClose,
 }: SingleFoodFormProps) {
   const [showMicroFields, setShowMicroFields] = useState(false)
+  // Stable row identities: array-index keys remount inputs while typing, dropping focus.
+  const nextUnitRowIdRef = useRef(1)
+  const unitRowIdsRef = useRef<string[]>([])
+  while (unitRowIdsRef.current.length < formState.units.length) {
+    unitRowIdsRef.current.push(`unit-row-${nextUnitRowIdRef.current++}`)
+  }
+  if (unitRowIdsRef.current.length > formState.units.length) {
+    unitRowIdsRef.current.length = formState.units.length
+  }
   const activeDefaultUnitLabel =
     formState.units[formState.defaultUnitIndex]?.name.trim() || 'واحد پیش‌فرض'
 
@@ -257,7 +266,7 @@ export function SingleFoodForm({
 
         <div className="space-y-2">
           {formState.units.map((u, idx) => (
-            <div key={idx} className="flex items-center gap-2">
+            <div key={unitRowIdsRef.current[idx]} className="flex items-center gap-2">
               <input
                 type="radio"
                 name="defaultUnit"

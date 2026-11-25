@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react'
+import { useEffect, useRef, type RefObject } from 'react'
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -18,6 +18,11 @@ export function useFocusTrap(
   active: boolean,
   onClose: () => void,
 ): void {
+  // Keep the callback fresh without re-running the trap on every parent render.
+  // An unstable inline onClose used to tear down/refocus the dialog on each render.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
   useEffect(() => {
     if (!active) return
     const previouslyFocused = document.activeElement as HTMLElement | null
@@ -31,7 +36,7 @@ export function useFocusTrap(
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault()
-        onClose()
+        onCloseRef.current()
         return
       }
       if (e.key !== 'Tab' || !container) return
@@ -58,5 +63,5 @@ export function useFocusTrap(
       document.removeEventListener('keydown', handleKeyDown)
       previouslyFocused?.focus?.()
     }
-  }, [active, containerRef, onClose])
+  }, [active, containerRef])
 }

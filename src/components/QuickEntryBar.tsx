@@ -12,7 +12,7 @@ import {
   Wand2,
   X,
 } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { memo, useMemo, useRef, useState } from 'react'
 import { buildMissingFoodIssueUrl } from '../config/feedback'
 import { QUICK_MEAL_SUGGESTIONS } from '../data/iranianFoods'
 import {
@@ -71,7 +71,7 @@ type QuickChipTab = 'frequent' | 'recent' | 'samples'
 
 const EMPTY_OVERRIDES: Record<string, ChipOverride> = {}
 
-export function QuickEntryBar({
+export const QuickEntryBar = memo(function QuickEntryBar({
   foods,
   recentEntries,
   templates,
@@ -88,6 +88,7 @@ export function QuickEntryBar({
   onSaveFetchedBarcodeFood,
 }: QuickEntryBarProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const mealRadioRefs = useRef<Array<HTMLButtonElement | null>>([])
   const [overridesByInput, setOverridesByInput] = useState<{
     text: string
     map: Record<string, ChipOverride>
@@ -300,12 +301,43 @@ export function QuickEntryBar({
     setOverridesByInput({ text: '', map: {} })
   }
 
+  const acceptTopAutocomplete = () => {
+    const top = autocompleteItems[0]
+    if (!top || top.completedInput === inputText) return false
+    onInputTextChange(top.completedInput)
+    setOverridesByInput({ text: '', map: {} })
+    return true
+  }
+
+  const handleMealRadioKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const last = MEAL_TYPE_ORDER.length - 1
+    let next = index
+    // RTL: ArrowLeft moves to the next meal to the visual left, ArrowRight back.
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next = index + 1
+    else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') next = index - 1
+    else if (e.key === 'Home') next = 0
+    else if (e.key === 'End') next = last
+    else return
+    e.preventDefault()
+    const target = Math.min(last, Math.max(0, next))
+    onMealTypeChange(MEAL_TYPE_ORDER[target])
+    mealRadioRefs.current[target]?.focus()
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Tab' && autocompleteItems.length > 0) {
-      const top = autocompleteItems[0]
-      if (top.completedInput !== inputText) {
+    // Tab is reserved for focus traversal. Accept a suggestion with ArrowDown
+    // (caret at end) or by clicking the explicit autocomplete chip below.
+    if (
+      e.key === 'ArrowDown' &&
+      !e.shiftKey &&
+      !e.altKey &&
+      !e.ctrlKey &&
+      autocompleteItems.length > 0
+    ) {
+      const el = e.currentTarget
+      const atEnd = el.selectionStart === el.value.length && el.selectionEnd === el.value.length
+      if (atEnd && acceptTopAutocomplete()) {
         e.preventDefault()
-        onInputTextChange(top.completedInput)
         return
       }
     }
@@ -363,7 +395,7 @@ export function QuickEntryBar({
             aria-label="انتخاب وعده غذایی"
             className="inline-flex items-center rounded-xl bg-[#0C0C0D] p-1 border border-[#26262A]"
           >
-            {MEAL_TYPE_ORDER.map((type) => {
+            {MEAL_TYPE_ORDER.map((type, index) => {
               const active = mealType === type
               return (
                 <button
@@ -372,6 +404,9 @@ export function QuickEntryBar({
                   id={`meal-type-${type}`}
                   role="radio"
                   aria-checked={active}
+                  tabIndex={active ? 0 : -1}
+                  ref={(el) => { mealRadioRefs.current[index] = el }}
+                  onKeyDown={(e) => handleMealRadioKeyDown(e, index)}
                   onClick={() => onMealTypeChange(type)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                     active
@@ -399,9 +434,21 @@ export function QuickEntryBar({
           value={inputText}
           onChange={(e) => onInputTextChange(e.target.value)}
           onKeyDown={handleKeyDown}
+          aria-describedby={`quick-input-hint${
+            autocompleteItems.length > 0 ? ' quick-autocomplete-hint' : ''
+          }`}
           placeholder="مثلاً: دو کفگیر قورمه‌سبزی کم‌روغن و یک کف دست سنگک و نصف لیوان دوغ"
           className="w-full resize-none rounded-xl bg-[#0C0C0D] border border-[#2A2A30] focus:border-emerald-500/70 focus:outline-none focus:ring-2 focus:ring-emerald-500/15 px-3.5 py-3 pl-9 text-sm sm:text-[15px] text-zinc-100 placeholder:text-zinc-500 leading-relaxed transition-all"
         />
+        <p id="quick-input-hint" className="mt-1 text-[10px] leading-relaxed text-zinc-500">
+          برای ثبت وعده Enter و برای خط جدید Shift+Enter را فشار دهید. پیشنهادها با کلیک روی گزینه
+          یا فشار ArrowDown (وقتی مکان‌نما در انتهای متن است) پذیرفته می‌شوند؛ Tab فقط برای جابه‌جایی بین عناصر است.
+        </p>
+        <div id="quick-autocomplete-hint" aria-live="polite" className="sr-only">
+          {autocompleteItems.length > 0
+            ? `${autocompleteItems.length} پیشنهاد تکمیل موجود است. با ArrowDown یا کلیک روی گزینه، پیشنهاد اول پذیرفته می‌شود.`
+            : ''}
+        </div>
         {inputText.length > 0 && (
           <button
             type="button"
@@ -701,6 +748,7 @@ export function QuickEntryBar({
               {frequentFoods.length > 0 && (
                 <button
                   type="button"
+                  aria-pressed={effectiveChipTab === 'frequent'}
                   onClick={() => setChipTab('frequent')}
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md transition-colors ${
                     effectiveChipTab === 'frequent'
@@ -715,6 +763,7 @@ export function QuickEntryBar({
               {recentFoods.length > 0 && (
                 <button
                   type="button"
+                  aria-pressed={effectiveChipTab === 'recent'}
                   onClick={() => setChipTab('recent')}
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md transition-colors ${
                     effectiveChipTab === 'recent'
@@ -728,6 +777,7 @@ export function QuickEntryBar({
               )}
               <button
                 type="button"
+                aria-pressed={effectiveChipTab === 'samples'}
                 onClick={() => setChipTab('samples')}
                 className={`px-2 py-0.5 rounded-md transition-colors ${
                   effectiveChipTab === 'samples'
@@ -786,4 +836,6 @@ export function QuickEntryBar({
       </div>
     </section>
   )
-}
+})
+
+// memo keeps this heavy input/preview panel from re-rendering on unrelated App state changes.

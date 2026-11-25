@@ -1,7 +1,8 @@
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useFocusTrap } from '../hooks/useFocusTrap'
+import { dateFromKey, formatJalaliDate } from '../utils/persianFormat'
 import {
   buildJalaliMonthCalendar,
   JALALI_WEEKDAY_HEADERS,
@@ -44,10 +45,45 @@ export function JalaliCalendarPopover({
     () => buildJalaliMonthCalendar(viewAnchorKey, todayKey, loggedDateKeys),
     [viewAnchorKey, todayKey, loggedDateKeys],
   )
+  const dayButtonRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const [focusedDayIndex, setFocusedDayIndex] = useState<number | null>(null)
+
+  // Reset roving focus when the displayed month changes.
+  useEffect(() => {
+    setFocusedDayIndex(null)
+  }, [viewAnchorKey])
+
+  const handleDayKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const days = monthGrid.days
+    const weekColumn = (monthGrid.leadingEmptyCells + index) % 7
+    let requested = index
+    // RTL grid: ArrowLeft advances along the row, ArrowRight moves back.
+    if (e.key === 'ArrowLeft') requested = index + 1
+    else if (e.key === 'ArrowRight') requested = index - 1
+    else if (e.key === 'ArrowDown') requested = index + 7
+    else if (e.key === 'ArrowUp') requested = index - 7
+    else if (e.key === 'Home') requested = index - weekColumn
+    else if (e.key === 'End') requested = index + (6 - weekColumn)
+    else return
+
+    e.preventDefault()
+    const direction = requested > index ? 1 : -1
+    let target = Math.min(days.length - 1, Math.max(0, requested))
+    while (target >= 0 && target < days.length && days[target].isFuture) target += direction
+    target = Math.min(days.length - 1, Math.max(0, target))
+    if (days[target]?.isFuture) return
+    setFocusedDayIndex(target)
+    dayButtonRefs.current[target]?.focus()
+  }
 
   if (!open) return null
 
   const canGoNextMonth = monthGrid.lastDayDateKey < todayKey
+  const selectedIndexInMonth = monthGrid.days.findIndex((d) => d.dateKey === selectedDateKey)
+  const rovingDayIndex =
+    focusedDayIndex !== null && focusedDayIndex < monthGrid.days.length
+      ? focusedDayIndex
+      : Math.max(0, selectedIndexInMonth)
 
   return createPortal(
     <div
@@ -111,19 +147,33 @@ export function JalaliCalendarPopover({
         </div>
 
         {/* Days Grid */}
-        <div className="grid grid-cols-7 gap-1 text-center tabular-nums-fa">
+        <div
+          className="grid grid-cols-7 gap-1 text-center tabular-nums-fa"
+          role="group"
+          aria-label={`روزهای ${monthGrid.title} — با کلیدهای جهت‌دار جابه‌جا شوید`}
+        >
           {Array.from({ length: monthGrid.leadingEmptyCells }).map((_, idx) => (
             <div key={`empty-${idx}`} className="h-9" />
           ))}
 
-          {monthGrid.days.map((day) => {
+          {monthGrid.days.map((day, idx) => {
             const isSelected = day.dateKey === selectedDateKey
+            const fullLabel = formatJalaliDate(dateFromKey(day.dateKey), 'full')
             return (
               <button
                 key={day.dateKey}
                 type="button"
                 disabled={day.isFuture}
+                ref={(el) => { dayButtonRefs.current[idx] = el }}
                 data-testid={`jalali-day-${day.dateKey}`}
+                aria-label={
+                  `${fullLabel}${day.isToday ? '، امروز' : ''}${day.hasEntries ? '، دارای وعده ثبت‌شده' : ''}`
+                }
+                aria-pressed={isSelected}
+                aria-current={day.isToday ? 'date' : undefined}
+                tabIndex={rovingDayIndex === idx && !day.isFuture ? 0 : -1}
+                onFocus={() => setFocusedDayIndex(idx)}
+                onKeyDown={(e) => handleDayKeyDown(e, idx)}
                 onClick={() => {
                   onSelectDate(day.dateKey)
                   onClose()

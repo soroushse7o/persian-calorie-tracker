@@ -152,6 +152,52 @@ export function App() {
     )
   }, [])
 
+  // Lazy tab chunks are loaded on demand (nav hover/focus) and, after the first
+  // real interaction, quietly during browser idle time — never on a fixed timer
+  // that fires while the user is still reading the home screen.
+  const preloadedTabsRef = useRef<Set<AppTab>>(new Set())
+  const preloadTab = useCallback((tab: AppTab) => {
+    if (tab === 'home' || preloadedTabsRef.current.has(tab)) return
+    preloadedTabsRef.current.add(tab)
+    if (tab === 'trends') void loadWeeklyTrendsTab()
+    else if (tab === 'foods') void loadFoodDatabaseTab()
+    else if (tab === 'settings') void loadSettingsTab()
+  }, [])
+
+  useEffect(() => {
+    type IdleWindow = Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number
+      cancelIdleCallback?: (handle: number) => void
+    }
+    const w = window as IdleWindow
+    let cancelIdle: (() => void) | null = null
+
+    const onFirstInteraction = () => {
+      window.removeEventListener('pointerdown', onFirstInteraction)
+      window.removeEventListener('keydown', onFirstInteraction)
+      const warmRemaining = () => {
+        preloadTab('trends')
+        preloadTab('foods')
+        preloadTab('settings')
+      }
+      if (typeof w.requestIdleCallback === 'function') {
+        const handle = w.requestIdleCallback(warmRemaining, { timeout: 2500 })
+        cancelIdle = () => w.cancelIdleCallback?.(handle)
+      } else {
+        const timer = window.setTimeout(warmRemaining, 1200)
+        cancelIdle = () => window.clearTimeout(timer)
+      }
+    }
+
+    window.addEventListener('pointerdown', onFirstInteraction, { once: true })
+    window.addEventListener('keydown', onFirstInteraction, { once: true })
+    return () => {
+      window.removeEventListener('pointerdown', onFirstInteraction)
+      window.removeEventListener('keydown', onFirstInteraction)
+      cancelIdle?.()
+    }
+  }, [preloadTab])
+
   useEffect(() => {
     const checkDateRollover = () => {
       const freshToday = getLocalDateKey()
@@ -174,17 +220,10 @@ export function App() {
     document.addEventListener('visibilitychange', onVisibility)
     const intervalId = window.setInterval(checkDateRollover, 60_000)
 
-    const preloadTimer = window.setTimeout(() => {
-      void loadFoodDatabaseTab()
-      void loadSettingsTab()
-      void loadWeeklyTrendsTab()
-    }, 800)
-
     return () => {
       window.removeEventListener('focus', checkDateRollover)
       document.removeEventListener('visibilitychange', onVisibility)
       window.clearInterval(intervalId)
-      window.clearTimeout(preloadTimer)
       if (toastTimerRef.current !== null) {
         window.clearTimeout(toastTimerRef.current)
       }
@@ -574,6 +613,9 @@ export function App() {
                   type="button"
                   id={`desktop-nav-${tab.id}`}
                   data-nav-tab={tab.id}
+                  aria-current={active ? 'page' : undefined}
+                  onMouseEnter={() => preloadTab(tab.id)}
+                  onFocus={() => preloadTab(tab.id)}
                   onClick={() => {
                     setOpenCalcOnSettings(false)
                     setActiveTab(tab.id)
@@ -881,6 +923,9 @@ export function App() {
                 type="button"
                 id={`mobile-nav-${tab.id}`}
                 data-nav-tab={tab.id}
+                aria-current={active ? 'page' : undefined}
+                aria-pressed={active}
+                onFocus={() => preloadTab(tab.id)}
                 onClick={() => {
                   setOpenCalcOnSettings(false)
                   setActiveTab(tab.id)
