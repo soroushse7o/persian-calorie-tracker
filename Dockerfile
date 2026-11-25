@@ -3,7 +3,7 @@
 # Follows Railway's official React/Vite guide: https://railway.com/guides/react
 # ==============================================================================
 
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 
 ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 ENV NPM_CONFIG_FUND=false
