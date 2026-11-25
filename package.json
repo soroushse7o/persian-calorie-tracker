@@ -8,10 +8,10 @@
     "name": "soroushse7o",
     "url": "https://github.com/soroushse7o"
   },
-  "homepage": "https://github.com/soroushse7o/persian-calorie-tracker#readme",
+  "homepage": "https://github.com/soroushse7o/persian-calorie-tracker-improved#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/soroushse7o/persian-calorie-tracker.git"
+    "url": "https://github.com/soroushse7o/persian-calorie-tracker-improved.git"
   },
   "scripts": {
     "dev": "vite",

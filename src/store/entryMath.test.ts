@@ -45,6 +45,31 @@ describe('Entry Macro Recomputation Accuracy (Zero Rounding Drift)', () => {
     expect(backToPalm.kcal).toBe(774)
   })
 
+  it('keeps sub-10 g portions intact when switching from a household unit to grams', () => {
+    const tiny: LoggedFoodEntry = {
+      id: 'tiny-walnut',
+      dateKey: '2026-11-24',
+      timestamp: 1000,
+      mealType: 'snack',
+      foodId: 'custom-tiny-walnut',
+      foodName: 'گردو',
+      quantity: 1,
+      unit: 'حبه',
+      totalGrams: 4,
+      kcal: 25,
+      protein: 0.6,
+      carbs: 0.5,
+      fat: 2.6,
+      per100g: { kcal: 625, protein: 15, carbs: 13.7, fat: 65.2 },
+    }
+
+    const inGrams = recomputeUpdatedEntry(tiny, { unit: 'گرم' }, DEFAULT_IRANIAN_FOODS)
+    expect(inGrams.unit).toBe('گرم')
+    expect(inGrams.quantity).toBe(4)
+    expect(inGrams.totalGrams).toBe(4)
+    expect(inGrams.kcal).toBe(25)
+  })
+
   it('preserves exact per100g calculation even if a custom food was deleted from catalog', () => {
     const orphanEntry: LoggedFoodEntry = {
       id: 'orphan-1',

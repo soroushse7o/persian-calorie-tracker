@@ -113,7 +113,7 @@ export function evaluateDueReminder(params: {
   ) {
     const intervalMs = settings.waterIntervalMin * 60_000
     const lastWater = settings.lastWaterRemindedAt ?? 0
-    if (lastWater > 0 && params.nowMs - lastWater >= intervalMs) {
+    if (lastWater === 0 || params.nowMs - lastWater >= intervalMs) {
       return {
         message: 'یادآور نوشیدن آب: یک لیوان آب بنوشید تا بدنتان شاداب بماند.',
         updatedSettings: {

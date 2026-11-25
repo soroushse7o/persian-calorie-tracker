@@ -16,11 +16,13 @@ export const MAX_CALCULATOR_AGE = 95
 
 export const HEALTH_DISCLAIMERS = {
   educationalNotice:
-    'کالری‌شمار روزمره صرفاً یک ابزار آموزشی و اطلاع‌رسانی برای برآورد تقریبی تغذیه است و جایگزین مشاوره، تشخیص یا تجویز پزشک و متخصص تغذیه نیست.',
+    'کالری شمار روزمره صرفاً یک ابزار آموزشی و اطلاع رسانی برای برآورد تقریبی تغذیه است و جایگزین مشاوره، تشخیص یا تجویز پزشک و متخصص تغذیه نیست.',
   specialGroupsWarning:
-    'هشدار مهم سلامتی: در صورت بارداری، شیردهی، سن زیر ۱۸ سال، سابقه یا علائم اختلالات خوردن (Eating Disorders)، دیابت یا بیماری‌های مزمن، از دنبال کردن رژیم‌های کاهش وزن خودسرانه خودداری کرده و حتماً با پزشک یا کارشناس تغذیه مشورت کنید.',
+    'هشدار مهم سلامتی: در صورت بارداری، شیردهی، سن زیر ۱۸ سال، سابقه یا علائم اختلالات خوردن (Eating Disorders)، دیابت یا بیماری های مزمن، از دنبال کردن رژیم های کاهش وزن خودسرانه خودداری کرده و حتماً با پزشک یا کارشناس تغذیه مشورت کنید.',
   underageBlockMessage:
-    'محاسبه‌گر کالری و کاهش وزن فقط برای بزرگسالان ۱۸ سال به بالا طراحی شده است. برای کودکان و نوجوانان زیر ۱۸ سال تعیین نیاز تغذیه‌ای باید صرفاً زیر نظر پزشک یا متخصص تغذیه انجام شود.',
+    'محاسبه گر کالری و کاهش وزن فقط برای بزرگسالان ۱۸ سال به بالا طراحی شده است. برای کودکان و نوجوانان زیر ۱۸ سال تعیین نیاز تغذیه ای باید صرفاً زیر نظر پزشک یا متخصص تغذیه انجام شود.',
+  invalidInputMessage:
+    'اطلاعات واردشده معتبر نیستند. لطفاً قد، وزن، جنسیت، سطح فعالیت و هدف را به درستی مشخص کنید.',
 } as const
 
 export interface TdeeInput {
@@ -71,6 +73,16 @@ export const WEIGHT_GOAL_LABELS: Record<WeightGoal, { title: string; deltaText: 
 export function evaluateTdeeGoals(input: TdeeInput): TdeeEvaluation {
   if (!Number.isFinite(input.ageYears) || input.ageYears < MIN_CALCULATOR_AGE) {
     return { ok: false, error: HEALTH_DISCLAIMERS.underageBlockMessage }
+  }
+  if (!Number.isFinite(input.heightCm) || !Number.isFinite(input.weightKg)) {
+    return { ok: false, error: HEALTH_DISCLAIMERS.invalidInputMessage }
+  }
+  if (
+    (input.sex !== 'male' && input.sex !== 'female') ||
+    !Object.hasOwn(ACTIVITY_MULTIPLIERS, input.activity) ||
+    !Object.hasOwn(WEIGHT_GOAL_LABELS, input.goal)
+  ) {
+    return { ok: false, error: HEALTH_DISCLAIMERS.invalidInputMessage }
   }
 
   const age = Math.min(MAX_CALCULATOR_AGE, Math.round(input.ageYears))

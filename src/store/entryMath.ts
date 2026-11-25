@@ -77,7 +77,7 @@ export function recomputeUpdatedEntry(
     const wasWeight = isWeightUnitName(entry.unit)
     const isNextWeight = isWeightUnitName(resolvedUnitName)
     if (!wasWeight && isNextWeight) {
-      nextQty = Math.max(10, Math.round(entry.totalGrams))
+      nextQty = Math.max(0.1, Math.round(entry.totalGrams * 10) / 10)
     } else if (wasWeight && !isNextWeight && gramsPerUnit > 0) {
       nextQty = Math.max(0.5, Math.round((entry.totalGrams / gramsPerUnit) * 2) / 2)
     }

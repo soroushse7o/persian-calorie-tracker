@@ -4,6 +4,7 @@ import {
   MIN_CALCULATOR_AGE,
   calculateRecommendedGoals,
   evaluateTdeeGoals,
+  type TdeeInput,
 } from './calorieCalculator'
 
 describe('Mifflin-St Jeor Persian TDEE & Macro Calculator (18+ Safe)', () => {
@@ -89,6 +90,35 @@ describe('Mifflin-St Jeor Persian TDEE & Macro Calculator (18+ Safe)', () => {
       goal: 'gain',
     })
     expect(gain.recommendedGoals.dailyKcal).toBeGreaterThan(2200)
+  })
+
+  it('rejects non-finite body measurements and unknown enum values instead of returning NaN goals', () => {
+    const valid: TdeeInput = {
+      sex: 'male',
+      ageYears: 30,
+      heightCm: 178,
+      weightKg: 78,
+      activity: 'moderate',
+      goal: 'maintain',
+    }
+
+    const invalidInputs: TdeeInput[] = [
+      { ...valid, heightCm: Number.NaN },
+      { ...valid, weightKg: Number.POSITIVE_INFINITY },
+      { ...valid, activity: 'super' as unknown as TdeeInput['activity'] },
+      { ...valid, goal: 'unknown' as unknown as TdeeInput['goal'] },
+      { ...valid, sex: 'other' as unknown as TdeeInput['sex'] },
+    ]
+
+    for (const input of invalidInputs) {
+      const result = evaluateTdeeGoals(input)
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.error).not.toContain('NaN')
+    }
+
+    expect(() =>
+      calculateRecommendedGoals({ ...valid, heightCm: Number.NaN }),
+    ).toThrow()
   })
 
   it('enforces safe minimum daily calorie floor for adult female cutting goals', () => {

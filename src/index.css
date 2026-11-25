@@ -207,6 +207,33 @@ html.light .hover\:bg-\[\#282830\]:hover {
   background-color: #E5E9F0 !important;
 }
 
+
+/* Light theme: audited dark utility classes that had no override */
+html.light .bg-\[\#121215\] {
+  background-color: #ECEFF3 !important;
+}
+
+html.light .bg-\[\#051B11\] {
+  background-color: #ECFDF5 !important;
+}
+
+html.light .hover\:bg-\[\#222227\]:hover,
+html.light .hover\:bg-\[\#22222A\]:hover,
+html.light .hover\:bg-\[\#24242A\]:hover,
+html.light .hover\:bg-\[\#25252B\]:hover,
+html.light .hover\:bg-\[\#26262C\]:hover,
+html.light .hover\:bg-\[\#26262E\]:hover,
+html.light .hover\:bg-\[\#27272D\]:hover,
+html.light .hover\:bg-\[\#28282F\]:hover,
+html.light .hover\:bg-\[\#292930\]:hover,
+html.light .hover\:bg-\[\#2A2A30\]:hover,
+html.light .hover\:bg-\[\#2C2C34\]:hover,
+html.light .hover\:bg-\[\#2D2D35\]:hover,
+html.light .hover\:bg-\[\#31313A\]:hover,
+html.light .hover\:bg-\[\#32323A\]:hover {
+  background-color: #E5E9F0 !important;
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
