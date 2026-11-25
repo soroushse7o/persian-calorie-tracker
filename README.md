@@ -6,7 +6,7 @@
 *Fast, 100% offline-first, mobile-first Persian Calorie & Nutrition Tracker built for Iranian home-cooked meals and real kitchen units.*
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fsoroushse7o%2Fpersian-calorie-tracker&project-name=persian-calorie-tracker&repository-name=persian-calorie-tracker&env=VITE_SITE_URL&envDescription=Canonical%20public%20HTTPS%20URL%20for%20OpenGraph%20and%20sitemap)
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/github/soroushse7o/persian-calorie-tracker-improved)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/github/soroushse7o/persian-calorie-tracker)
 
 [🌐 Live on Vercel](https://persian-calorie-tracker.vercel.app) • [🌐 Live on Railway](https://persian-calorie-tracker-production.up.railway.app/)
 
