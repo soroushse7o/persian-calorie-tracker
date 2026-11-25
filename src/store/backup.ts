@@ -11,6 +11,7 @@ import {
 } from '../types/nutrition'
 import { extractUserFoodLayer } from './catalog'
 import {
+  MAX_ENTRIES,
   normalizeGoals,
   sanitizeEntryList,
   sanitizeFoodList,
@@ -21,6 +22,9 @@ import {
 } from './sanitizers'
 
 export type BackupImportMode = 'merge' | 'replace'
+
+/** 30 MB of JSON text is far beyond any realistic personal backup; larger files are refused. */
+export const MAX_BACKUP_JSON_CHARS = 30_000_000
 
 export interface BackupPreview {
   version: number
@@ -78,6 +82,13 @@ export function analyzeBackupJson(
   rawJson: string,
   defaults: FoodItem[] = DEFAULT_IRANIAN_FOODS,
 ): BackupAnalysisResult {
+  if (rawJson.length > MAX_BACKUP_JSON_CHARS) {
+    return {
+      ok: false,
+      error: 'فایل پشتیبان بیش از حد بزرگ است. لطفاً فایل معتبر دیگری انتخاب کنید.',
+    }
+  }
+
   let rawObj: unknown
   try {
     rawObj = JSON.parse(rawJson)
@@ -93,6 +104,12 @@ export function analyzeBackupJson(
   }
 
   const parsed = rawObj as Partial<AppBackupData>
+  if (Array.isArray(parsed.entries) && parsed.entries.length > MAX_ENTRIES) {
+    return {
+      ok: false,
+      error: 'تعداد وعده‌های فایل پشتیبان بیش از حد مجاز است.',
+    }
+  }
   const hasLegacyFoodsArray = Array.isArray(parsed.foods)
   const hasV3Layer =
     Array.isArray(parsed.customFoods) ||

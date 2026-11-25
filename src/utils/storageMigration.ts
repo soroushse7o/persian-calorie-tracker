@@ -70,7 +70,10 @@ export function runStorageMigrations(
     const existingV3Overrides = storage.getItem(STORAGE_KEYS.foodOverrides)
     const legacyV2FoodsRaw = storage.getItem(STORAGE_KEYS.foods)
 
+    let v3WriteFailed = false
     if (!existingV3Custom && !existingV3Overrides && legacyV2FoodsRaw) {
+      let customJson: string
+      let overridesJson: string
       try {
         const parsedLegacy = JSON.parse(legacyV2FoodsRaw) as unknown
         const cleanLegacy = sanitizeFoodList(parsedLegacy)
@@ -79,16 +82,47 @@ export function runStorageMigrations(
           DEFAULT_IRANIAN_FOODS,
           CATALOG_VERSION,
         )
-        storage.setItem(STORAGE_KEYS.customFoods, JSON.stringify(customFoods))
-        storage.setItem(STORAGE_KEYS.foodOverrides, JSON.stringify(foodOverrides))
-        // Remove bulky redundant full-catalog v2 copy once v3 user-layer write succeeds
-        storage.removeItem?.(STORAGE_KEYS.foods)
+        customJson = JSON.stringify(customFoods)
+        overridesJson = JSON.stringify(foodOverrides)
       } catch {
-        // Keep legacyV2FoodsRaw untouched if JSON was malformed
+        // Keep legacyV2FoodsRaw untouched if JSON was malformed (legacy behavior).
+        customJson = ''
+        overridesJson = ''
+      }
+
+      if (customJson && overridesJson) {
+        const previousValues: Array<[key: string, value: string | null]> = []
+        try {
+          // Write BOTH v3 keys first; the schema version is stamped only after all
+          // v3 data is durable. A failure mid-write rolls back keys already written.
+          storage.setItem(STORAGE_KEYS.customFoods, customJson)
+          previousValues.push([STORAGE_KEYS.customFoods, existingV3Custom])
+          storage.setItem(STORAGE_KEYS.foodOverrides, overridesJson)
+          previousValues.push([STORAGE_KEYS.foodOverrides, existingV3Overrides])
+        } catch {
+          for (const [key, previous] of previousValues.reverse()) {
+            try {
+              if (previous === null) storage.removeItem?.(key)
+              else storage.setItem(key, previous)
+            } catch {
+              // Best-effort rollback; the untouched version stays at 2 regardless.
+            }
+          }
+          v3WriteFailed = true
+        }
+
+        if (!v3WriteFailed) {
+          // Remove bulky redundant full-catalog v2 copy once both v3 writes succeed
+          storage.removeItem?.(STORAGE_KEYS.foods)
+        }
       }
     }
 
-    storage.setItem(STORAGE_KEYS.schemaVersion, String(STORAGE_SCHEMA_VERSION))
+    // Never advertise v3 after a partial v2 -> v3 write: leave the version at 2
+    // so the migration can be retried safely on the next launch.
+    if (!v3WriteFailed) {
+      storage.setItem(STORAGE_KEYS.schemaVersion, String(STORAGE_SCHEMA_VERSION))
+    }
   } catch {
     // Migration error will be surfaced on next write if storage is locked/full
   }

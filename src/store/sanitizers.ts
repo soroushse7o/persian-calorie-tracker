@@ -27,6 +27,31 @@ const VALID_CATEGORIES = new Set<FoodCategory>([
 export const VALID_MEAL_TYPES = new Set<MealType>(MEAL_TYPE_ORDER)
 export const DATE_KEY_REGEX = /^\d{4}-\d{2}-\d{2}$/
 
+/**
+ * Sane upper bounds for untrusted backup/localStorage data. Oversized strings are
+ * clipped and oversized collections are capped so a hostile/corrupt file cannot
+ * exhaust memory or freeze the UI. Import itself is additionally size-gated in
+ * `analyzeBackupJson`.
+ */
+export const MAX_NAME_LENGTH = 200
+export const MAX_TEXT_LENGTH = 1000
+export const MAX_ID_LENGTH = 200
+export const MAX_UNIT_NAME_LENGTH = 60
+export const MAX_FOODS = 5000
+export const MAX_ENTRIES = 20000
+export const MAX_OVERRIDES = 5000
+export const MAX_WEIGHTS = 20000
+export const MAX_TEMPLATES = 1000
+export const MAX_UNITS_PER_FOOD = 50
+export const MAX_ALIASES_PER_FOOD = 50
+export const MAX_INGREDIENTS_PER_RECIPE = 100
+export const MAX_ITEMS_PER_TEMPLATE = 200
+export const MAX_WATER_DAYS = 20000
+
+function clipText(value: string, max: number): string {
+  return value.length > max ? value.slice(0, max) : value
+}
+
 export function isFiniteNonNegative(val: unknown): val is number {
   return typeof val === 'number' && Number.isFinite(val) && val >= 0
 }
@@ -68,7 +93,7 @@ function kcalIsZero(kcal: number): boolean {
 function sanitizeRecipeIngredients(raw: unknown): RecipeIngredientRecord[] | undefined {
   if (!Array.isArray(raw)) return undefined
   const out: RecipeIngredientRecord[] = []
-  for (const item of raw) {
+  for (const item of raw.slice(0, MAX_INGREDIENTS_PER_RECIPE)) {
     if (!item || typeof item !== 'object') continue
     const r = item as Partial<RecipeIngredientRecord>
     if (
@@ -81,9 +106,9 @@ function sanitizeRecipeIngredients(raw: unknown): RecipeIngredientRecord[] | und
       r.quantity > 0
     ) {
       out.push({
-        foodId: r.foodId.trim(),
+        foodId: clipText(r.foodId.trim(), MAX_ID_LENGTH),
         quantity: r.quantity,
-        unit: r.unit.trim(),
+        unit: clipText(r.unit.trim(), MAX_UNIT_NAME_LENGTH),
       })
     }
   }
@@ -103,6 +128,7 @@ export function sanitizeImportedFood(raw: unknown): FoodItem | null {
 
   if (!Array.isArray(f.units) || f.units.length === 0) return null
   const cleanUnits: FoodUnit[] = f.units
+    .slice(0, MAX_UNITS_PER_FOOD)
     .filter(
       (u): u is FoodUnit =>
         Boolean(u) &&
@@ -113,13 +139,14 @@ export function sanitizeImportedFood(raw: unknown): FoodItem | null {
         u.grams > 0,
     )
     .map((u) => ({
-      name: u.name.trim(),
+      name: clipText(u.name.trim(), MAX_UNIT_NAME_LENGTH),
       grams: u.grams,
       ...(Array.isArray(u.aliases)
         ? {
-            aliases: u.aliases.filter(
-              (a): a is string => typeof a === 'string' && a.trim().length > 0,
-            ),
+            aliases: u.aliases
+              .slice(0, MAX_ALIASES_PER_FOOD)
+              .filter((a): a is string => typeof a === 'string' && a.trim().length > 0)
+              .map((a) => clipText(a.trim(), MAX_NAME_LENGTH)),
           }
         : {}),
     }))
@@ -130,7 +157,10 @@ export function sanitizeImportedFood(raw: unknown): FoodItem | null {
   }
 
   const cleanAliases = Array.isArray(f.aliases)
-    ? f.aliases.filter((a): a is string => typeof a === 'string' && a.trim().length > 0)
+    ? f.aliases
+        .slice(0, MAX_ALIASES_PER_FOOD)
+        .filter((a): a is string => typeof a === 'string' && a.trim().length > 0)
+        .map((a) => clipText(a.trim(), MAX_NAME_LENGTH))
     : []
 
   const category: FoodCategory =
@@ -159,8 +189,8 @@ export function sanitizeImportedFood(raw: unknown): FoodItem | null {
   const cleanMicro = sanitizeOptionalMicronutrients(f.per100g.micronutrients)
 
   return {
-    id: f.id.trim(),
-    name: f.name.trim(),
+    id: clipText(f.id.trim(), MAX_ID_LENGTH),
+    name: clipText(f.name.trim(), MAX_NAME_LENGTH),
     aliases: cleanAliases,
     category,
     per100g: {
@@ -174,7 +204,9 @@ export function sanitizeImportedFood(raw: unknown): FoodItem | null {
     defaultUnit,
     units: cleanUnits,
     ...(cleanBarcode ? { barcode: cleanBarcode } : {}),
-    ...(typeof f.source === 'string' && f.source.trim() ? { source: f.source.trim() } : {}),
+    ...(typeof f.source === 'string' && f.source.trim()
+      ? { source: clipText(f.source.trim(), MAX_TEXT_LENGTH) }
+      : {}),
     ...(typeof f.verified === 'boolean' ? { verified: f.verified } : {}),
     ...(f.isCustom ? { isCustom: true } : {}),
     ...(f.isRecipe ? { isRecipe: true } : {}),
@@ -187,7 +219,7 @@ export function sanitizeFoodList(raw: unknown): FoodItem[] {
   if (!Array.isArray(raw)) return []
   const seen = new Set<string>()
   const result: FoodItem[] = []
-  for (const item of raw) {
+  for (const item of raw.slice(0, MAX_FOODS)) {
     const clean = sanitizeImportedFood(item)
     if (clean && !seen.has(clean.id)) {
       seen.add(clean.id)
@@ -200,16 +232,17 @@ export function sanitizeFoodList(raw: unknown): FoodItem[] {
 export function sanitizeFoodOverrides(raw: unknown): Record<string, FoodOverrideRecord> {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
   const result: Record<string, FoodOverrideRecord> = {}
-  for (const [id, entry] of Object.entries(raw as Record<string, unknown>)) {
+  for (const [id, entry] of Object.entries(raw as Record<string, unknown>).slice(0, MAX_OVERRIDES)) {
     if (!id.trim() || !entry || typeof entry !== 'object') continue
     const rec = entry as Partial<FoodOverrideRecord>
     const cleanFood = sanitizeImportedFood(rec.food ?? entry)
     if (!cleanFood) continue
-    result[id.trim()] = {
-      food: { ...cleanFood, id: id.trim(), isCustom: false, isOverridden: true },
+    const cleanId = clipText(id.trim(), MAX_ID_LENGTH)
+    result[cleanId] = {
+      food: { ...cleanFood, id: cleanId, isCustom: false, isOverridden: true },
       baseCatalogVersion:
         typeof rec.baseCatalogVersion === 'string' && rec.baseCatalogVersion.trim()
-          ? rec.baseCatalogVersion.trim()
+          ? clipText(rec.baseCatalogVersion.trim(), MAX_ID_LENGTH)
           : 'legacy',
       updatedAt:
         typeof rec.updatedAt === 'number' && Number.isFinite(rec.updatedAt) && rec.updatedAt > 0
@@ -243,17 +276,23 @@ export function sanitizeImportedEntry(raw: unknown): LoggedFoodEntry | null {
   const micronutrients = sanitizeOptionalMicronutrients(e.micronutrients)
 
   return {
-    id: e.id.trim(),
+    id: clipText(e.id.trim(), MAX_ID_LENGTH),
     dateKey: e.dateKey,
     timestamp:
       typeof e.timestamp === 'number' && Number.isFinite(e.timestamp) && e.timestamp > 0
         ? e.timestamp
         : Date.now(),
     mealType,
-    foodId: typeof e.foodId === 'string' && e.foodId.trim() ? e.foodId.trim() : 'custom',
-    foodName: e.foodName.trim(),
+    foodId:
+      typeof e.foodId === 'string' && e.foodId.trim()
+        ? clipText(e.foodId.trim(), MAX_ID_LENGTH)
+        : 'custom',
+    foodName: clipText(e.foodName.trim(), MAX_NAME_LENGTH),
     quantity,
-    unit: typeof e.unit === 'string' && e.unit.trim() ? e.unit.trim() : 'پرس',
+    unit:
+      typeof e.unit === 'string' && e.unit.trim()
+        ? clipText(e.unit.trim(), MAX_UNIT_NAME_LENGTH)
+        : 'پرس',
     totalGrams:
       typeof e.totalGrams === 'number' && Number.isFinite(e.totalGrams) && e.totalGrams > 0
         ? e.totalGrams
@@ -265,10 +304,12 @@ export function sanitizeImportedEntry(raw: unknown): LoggedFoodEntry | null {
     ...(isFiniteNonNegative(e.fiber) ? { fiber: e.fiber } : {}),
     ...(micronutrients ? { micronutrients } : {}),
     ...(typeof e.modifierLabel === 'string' && e.modifierLabel.trim()
-      ? { modifierLabel: e.modifierLabel.trim() }
+      ? { modifierLabel: clipText(e.modifierLabel.trim(), MAX_UNIT_NAME_LENGTH) }
       : {}),
     ...(per100g ? { per100g } : {}),
-    ...(typeof e.sourceText === 'string' ? { sourceText: e.sourceText } : {}),
+    ...(typeof e.sourceText === 'string'
+      ? { sourceText: clipText(e.sourceText, MAX_TEXT_LENGTH) }
+      : {}),
   }
 }
 
@@ -276,7 +317,7 @@ export function sanitizeEntryList(raw: unknown): LoggedFoodEntry[] {
   if (!Array.isArray(raw)) return []
   const seen = new Set<string>()
   const out: LoggedFoodEntry[] = []
-  for (const item of raw) {
+  for (const item of raw.slice(0, MAX_ENTRIES)) {
     const clean = sanitizeImportedEntry(item)
     if (clean && !seen.has(clean.id)) {
       seen.add(clean.id)
@@ -289,7 +330,7 @@ export function sanitizeEntryList(raw: unknown): LoggedFoodEntry[] {
 export function sanitizeWaterMap(raw: unknown): Record<string, number> {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
   const clean: Record<string, number> = {}
-  for (const [key, val] of Object.entries(raw as Record<string, unknown>)) {
+  for (const [key, val] of Object.entries(raw as Record<string, unknown>).slice(0, MAX_WATER_DAYS)) {
     if (DATE_KEY_REGEX.test(key) && typeof val === 'number' && Number.isFinite(val) && val >= 0) {
       const clamped = Math.min(30, Math.round(val))
       if (clamped > 0) {
@@ -325,7 +366,7 @@ export function sanitizeWeightEntry(raw: unknown): WeightEntry | null {
 export function sanitizeWeightList(raw: unknown): WeightEntry[] {
   if (!Array.isArray(raw)) return []
   const byDate = new Map<string, WeightEntry>()
-  for (const item of raw) {
+  for (const item of raw.slice(0, MAX_WEIGHTS)) {
     const clean = sanitizeWeightEntry(item)
     if (!clean) continue
     const prev = byDate.get(clean.dateKey)
@@ -348,10 +389,16 @@ export function sanitizeTemplateItem(raw: unknown): MealTemplateItem | null {
       : 1
 
   return {
-    foodId: typeof it.foodId === 'string' && it.foodId.trim() ? it.foodId.trim() : 'custom',
-    foodName: it.foodName.trim(),
+    foodId:
+      typeof it.foodId === 'string' && it.foodId.trim()
+        ? clipText(it.foodId.trim(), MAX_ID_LENGTH)
+        : 'custom',
+    foodName: clipText(it.foodName.trim(), MAX_NAME_LENGTH),
     quantity,
-    unit: typeof it.unit === 'string' && it.unit.trim() ? it.unit.trim() : 'پرس',
+    unit:
+      typeof it.unit === 'string' && it.unit.trim()
+        ? clipText(it.unit.trim(), MAX_UNIT_NAME_LENGTH)
+        : 'پرس',
     totalGrams:
       typeof it.totalGrams === 'number' && Number.isFinite(it.totalGrams) && it.totalGrams > 0
         ? it.totalGrams
@@ -372,6 +419,7 @@ export function sanitizeTemplate(raw: unknown): MealTemplate | null {
   if (!Array.isArray(t.items) || t.items.length === 0) return null
 
   const cleanItems = t.items
+    .slice(0, MAX_ITEMS_PER_TEMPLATE)
     .map(sanitizeTemplateItem)
     .filter((it): it is MealTemplateItem => it !== null)
   if (cleanItems.length === 0) return null
@@ -382,8 +430,8 @@ export function sanitizeTemplate(raw: unknown): MealTemplate | null {
       : 'snack'
 
   return {
-    id: t.id.trim(),
-    name: t.name.trim(),
+    id: clipText(t.id.trim(), MAX_ID_LENGTH),
+    name: clipText(t.name.trim(), MAX_NAME_LENGTH),
     mealType,
     items: cleanItems,
     createdAt:
@@ -397,7 +445,7 @@ export function sanitizeTemplateList(raw: unknown): MealTemplate[] {
   if (!Array.isArray(raw)) return []
   const seen = new Set<string>()
   const out: MealTemplate[] = []
-  for (const item of raw) {
+  for (const item of raw.slice(0, MAX_TEMPLATES)) {
     const clean = sanitizeTemplate(item)
     if (clean && !seen.has(clean.id)) {
       seen.add(clean.id)

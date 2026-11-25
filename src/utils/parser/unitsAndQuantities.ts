@@ -303,23 +303,27 @@ function matchCompoundIntegerWords(tokens: string[]): { value: number; consumed:
   let idx = 0
   let total = 0
 
-  if (tokens[idx] in HUNDREDS_WORDS) {
+  if (Object.hasOwn(HUNDREDS_WORDS, tokens[idx])) {
     total += HUNDREDS_WORDS[tokens[idx]]
     idx += 1
 
     if (idx + 1 < tokens.length && tokens[idx] === 'و') {
       const next = tokens[idx + 1]
-      if (next in TENS_WORDS) {
+      if (Object.hasOwn(TENS_WORDS, next)) {
         total += TENS_WORDS[next]
         idx += 2
-        if (idx + 1 < tokens.length && tokens[idx] === 'و' && tokens[idx + 1] in ONES_WORDS) {
+        if (
+          idx + 1 < tokens.length &&
+          tokens[idx] === 'و' &&
+          Object.hasOwn(ONES_WORDS, tokens[idx + 1])
+        ) {
           total += ONES_WORDS[tokens[idx + 1]]
           idx += 2
         }
-      } else if (next in TEENS_WORDS) {
+      } else if (Object.hasOwn(TEENS_WORDS, next)) {
         total += TEENS_WORDS[next]
         idx += 2
-      } else if (next in ONES_WORDS) {
+      } else if (Object.hasOwn(ONES_WORDS, next)) {
         total += ONES_WORDS[next]
         idx += 2
       }
@@ -327,10 +331,10 @@ function matchCompoundIntegerWords(tokens: string[]): { value: number; consumed:
     return { value: total, consumed: idx }
   }
 
-  if (tokens[0] in TENS_WORDS) {
+  if (Object.hasOwn(TENS_WORDS, tokens[0])) {
     total += TENS_WORDS[tokens[0]]
     idx = 1
-    if (tokens.length >= 3 && tokens[1] === 'و' && tokens[2] in ONES_WORDS) {
+    if (tokens.length >= 3 && tokens[1] === 'و' && Object.hasOwn(ONES_WORDS, tokens[2])) {
       total += ONES_WORDS[tokens[2]]
       idx = 3
     }
@@ -343,7 +347,7 @@ function matchCompoundIntegerWords(tokens: string[]): { value: number; consumed:
 function parseBaseNumberToken(token: string): number | null {
   const numeric = parseNumericToken(token)
   if (numeric !== null) return numeric
-  if (token in SINGLE_NUMBER_WORDS) {
+  if (Object.hasOwn(SINGLE_NUMBER_WORDS, token)) {
     return SINGLE_NUMBER_WORDS[token]
   }
   return null
