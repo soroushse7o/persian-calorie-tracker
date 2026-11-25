@@ -477,8 +477,11 @@ export function VoiceAndBarcodeControls({
                     </div>
                   ) : (
                     <div className="space-y-2.5">
-                      <span className="block text-zinc-300">
-                        این بارکد ({cleanDigits}) هنوز در بانک آفلاین دستگاه شما نیست.
+                      <span className="block text-zinc-300 leading-relaxed">
+                        این بارکد ({cleanDigits}) در بانک آفلاین دستگاه و در پایگاه جهانی
+                        OpenFoodFacts یافت نشد. بیشتر کالاهای ایرانی در آن پایگاه ثبت نمیشوند؛ با
+                        «تعریف دستی محصول» اطلاعات روی بستهبندی را یک بار وارد کنید تا بارکد دفتر
+                        بعدی در همین دستگاه شناخته شود.
                       </span>
 
                       <div className="flex flex-wrap items-center gap-2">
@@ -505,7 +508,7 @@ export function VoiceAndBarcodeControls({
                             onRequestAddBarcodeFood(cleanDigits)
                             closeBarcodeModal()
                           }}
-                          className="inline-flex items-center gap-1 rounded-xl bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold px-3 py-1.5 text-xs"
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 text-[#051B11] font-bold px-3 py-1.5 text-xs"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           <span>تعریف دستی محصول</span>

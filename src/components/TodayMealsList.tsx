@@ -29,6 +29,7 @@ import {
   formatTimeFa,
   shiftDateKey,
 } from '../utils/persianFormat'
+import { buildEditableUnitOptions, isWeightUnit, parseEditableQuantity } from '../utils/entryQuantity'
 
 interface TodayMealsListProps {
   foods: FoodItem[]
@@ -133,9 +134,9 @@ export function TodayMealsList({
   const hasAnyToday = dayEntries.length > 0
 
   const handleStepEntryQty = (entry: LoggedFoodEntry, direction: 1 | -1) => {
-    const isWeight = entry.unit === 'گرم' || entry.unit === 'میلی‌لیتر'
-    const step = isWeight ? 25 : 0.5
-    const min = isWeight ? 10 : 0.25
+    const weight = isWeightUnit(entry.unit)
+    const step = weight ? 5 : 0.5
+    const min = weight ? 1 : 0.25
     const nextQty = Math.max(min, Math.round((entry.quantity + direction * step) * 100) / 100)
     onUpdateEntry(entry.id, { quantity: nextQty })
   }
@@ -307,11 +308,7 @@ export function TodayMealsList({
                   {items.map((entry) => {
                     const isEditing = editingEntryId === entry.id
                     const matchedFood = foodById.get(entry.foodId)
-                    const unitOptions = matchedFood
-                      ? matchedFood.units.some((u) => u.name === entry.unit)
-                        ? matchedFood.units
-                        : [{ name: entry.unit, grams: 1 }, ...matchedFood.units]
-                      : null
+                    const unitOptions = buildEditableUnitOptions(matchedFood, entry)
 
                     return (
                       <li
@@ -410,9 +407,20 @@ export function TodayMealsList({
                               >
                                 <Plus className="w-3.5 h-3.5" />
                               </button>
-                              <span className="text-xs font-semibold text-zinc-100 px-1 tabular-nums-fa">
-                                {formatQuantityFa(entry.quantity)}
-                              </span>
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                aria-label={`مقدار ${entry.foodName} به ${entry.unit}`}
+                                data-testid="inline-entry-quantity-input"
+                                value={entry.quantity}
+                                min={isWeightUnit(entry.unit) ? 0.1 : 0.25}
+                                step={isWeightUnit(entry.unit) ? 1 : 0.25}
+                                onChange={(e) => {
+                                  const nextQty = parseEditableQuantity(e.target.value)
+                                  if (nextQty !== null) onUpdateEntry(entry.id, { quantity: nextQty })
+                                }}
+                                className="w-16 rounded-lg bg-[#25252C] border border-[#35353F] text-zinc-100 text-xs px-2 py-1 text-center tabular-nums-fa focus:outline-none focus:border-emerald-500/70"
+                              />
                               <button
                                 type="button"
                                 onClick={() => handleStepEntryQty(entry, -1)}
